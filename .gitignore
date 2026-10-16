@@ -4,6 +4,7 @@ node_modules/
 dist/
 web-build/
 coverage/
+.vitest/
 *.tsbuildinfo
 expo-env.d.ts
 # Expo continuous native generation

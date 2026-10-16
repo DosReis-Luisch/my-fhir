@@ -1,6 +1,6 @@
 import { conceptText, patientName, resourceReference, type FhirResource } from '@myfhir/fhir-core';
 import type { ResourcePresentation } from './descriptor';
-import { observationFields } from './observation';
+import { hasUnsupportedObservationResult, observationFields } from './observation';
 
 export type { PresentationField, ResourcePresentation } from './descriptor';
 
@@ -70,6 +70,12 @@ export function presentResource(resource: FhirResource): ResourcePresentation {
         return fallback(resource, [
           ...notices,
           `Record status: ${resource.status}. Result is not displayed.`,
+        ]);
+      }
+      if (hasUnsupportedObservationResult(resource)) {
+        return fallback(resource, [
+          ...notices,
+          'A supplied result value is not supported in this view. See the original resource.',
         ]);
       }
       return {

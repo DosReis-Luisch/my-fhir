@@ -36,6 +36,7 @@ The intended long-term order is specialized clinical rendering, profile-driven
 rendering using StructureDefinitions, then generic fallback. Phase 0 implements
 resource-specific Patient and Observation functions and the fallback only. No profile
 plugin registry or speculative resolver API is introduced before there is a real use case.
+Phase 0.1 hardens result/time handling without changing the presentation descriptor model.
 
 - Patient: supplied name, date of birth, administrative gender.
 - Observation: supplied code text/display, quantity (including comparator and unit),
@@ -46,15 +47,22 @@ plugin registry or speculative resolver API is introduced before there is a real
   ignoring them could change clinical meaning.
 - Cancelled or entered-in-error observations: generic fallback with explicit status;
   result values are withheld from the summary. Other statuses remain visible in details.
+- Supplied unsupported Observation values, including component values: generic fallback
+  for the entire record. Supported forms without a usable display and multiple supplied
+  value choices also fall back, rather than claiming absence or choosing a result.
 
 All summaries state that only selected fields are shown. Unknown fields, extensions,
 unsupported value choices and declared profiles remain in the original resource and
 are not promoted into interpreted clinical facts. The details screen can expose that
 source as plain text JSON. Resource narratives are never rendered as executable HTML.
-Missing/unsupported values are labelled unavailable, not assigned a clinical meaning.
+Genuinely absent values are labelled unavailable or use a supplied dataAbsentReason.
+Supplied unsupported values are explicitly identified as unsupported and retained in source.
 Source paths identify summarized elements, not a complete coverage or FHIRPath model.
 Dates retain source precision/timezone rather than inventing a time or converting a
-partial date. No normality classification or medical advice is inferred.
+partial date. `effectiveDateTime` is labelled **Clinically effective time**, following
+[FHIR R4 semantics](https://hl7.org/fhir/R4/observation-definitions.html#Observation.effective_x_);
+it is not a recording or persistence timestamp. No normality classification or medical
+advice is inferred.
 
 ## Current boundary and limitations
 

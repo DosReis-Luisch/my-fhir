@@ -34,6 +34,8 @@
 - npm commands are only appropriate for relevant frontend work. Never start a long-running
   watch/dev server on the user's behalf unless explicitly authorized for that task.
 - When validation is authorized, use `npm run typecheck`, `npm run lint`, and
-  `npm run format:check`; run Expo dependency checks from `apps/patient` when relevant.
+  `npm run format:check`; use `npm test` for the focused shared-package Vitest suite
+  (single run, no watch). Keep tests in `packages/*/tests` and use synthetic resources.
+  Run Expo dependency checks from `apps/patient` when relevant.
   Use docs/development.md for manual web/device smoke checks.
 - Do not create commits, push branches, or open pull requests unless requested.
