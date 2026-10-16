@@ -1,0 +1,71 @@
+import { Link } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
+import type { ResourcePresentation } from '@myfhir/fhir-renderer';
+import { colors } from './theme';
+
+export function ResourceCard({
+  presentation,
+  compact = false,
+}: {
+  presentation: ResourcePresentation;
+  compact?: boolean;
+}) {
+  const fields = compact
+    ? presentation.fields.filter(
+        (field) => field.sourcePath !== 'effectiveDateTime' && field.sourcePath !== 'status',
+      )
+    : presentation.fields;
+  return (
+    <View style={styles.card}>
+      <Text style={styles.eyebrow}>{presentation.subtitle}</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        {presentation.title}
+      </Text>
+      <View style={styles.fields}>
+        {fields.map((field) => (
+          <View key={field.sourcePath} style={styles.field}>
+            <Text style={styles.label}>{field.label}</Text>
+            <Text selectable style={styles.value}>
+              {field.value}
+            </Text>
+          </View>
+        ))}
+      </View>
+      {compact && presentation.source.id ? (
+        <Link
+          href={{ pathname: '/record/[id]', params: { id: presentation.source.id } }}
+          style={styles.link}
+          accessibilityLabel={`View ${presentation.title} record`}
+        >
+          View record →
+        </Link>
+      ) : null}
+      {!compact || presentation.kind === 'generic'
+        ? presentation.notices.map((notice) => (
+            <Text key={notice} style={styles.notice}>
+              {notice}
+            </Text>
+          ))
+        : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    padding: 24,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 12,
+  },
+  eyebrow: { color: colors.accent, fontSize: 12, fontWeight: '600' },
+  title: { color: colors.ink, fontSize: 23, fontWeight: '600' },
+  fields: { gap: 14, marginVertical: 6 },
+  field: { gap: 4 },
+  label: { color: colors.muted, fontSize: 12 },
+  value: { color: colors.ink, fontSize: 20, fontWeight: '500' },
+  link: { color: colors.accent, fontSize: 14, fontWeight: '600', paddingVertical: 8 },
+  notice: { color: colors.muted, fontSize: 13, lineHeight: 20 },
+});

@@ -1,0 +1,26 @@
+# Dependencies and generated output
+node_modules/
+.expo/
+dist/
+web-build/
+coverage/
+*.tsbuildinfo
+expo-env.d.ts
+# Expo continuous native generation
+/apps/patient/android/
+/apps/patient/ios/
+# Local settings, credentials, logs
+.env
+.env.*
+!.env.example
+*.log
+*.pem
+*.key
+*.p12
+*.mobileprovision
+.DS_Store
+Thumbs.db
+.idea/
+# Never store clinical exports here; samples/synthetic is the curated exception.
+/data/
+/exports/

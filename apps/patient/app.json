@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "MyFHIR",
+    "slug": "myfhir-patient",
+    "version": "0.0.0",
+    "scheme": "myfhir",
+    "userInterfaceStyle": "light",
+    "plugins": ["expo-router"],
+    "ios": { "supportsTablet": true },
+    "web": { "bundler": "metro" }
+  }
+}
