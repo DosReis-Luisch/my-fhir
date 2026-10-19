@@ -1,3 +1,4 @@
+import { Link } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { isResource, resourceReference } from '@myfhir/fhir-core';
 import { presentResource } from '@myfhir/fhir-renderer';
@@ -45,6 +46,12 @@ export default function Overview() {
         Other records
       </Text>
       <ResourceCard presentation={presentResource(organization)} compact />
+      <View style={styles.demo}>
+        <Text style={styles.caption}>Developer / synthetic demo</Text>
+        <Link href="/profile-inspection" style={styles.demoLink}>
+          Explore FHIR profile inspection (demo)
+        </Link>
+      </View>
     </Page>
   );
 }
@@ -59,4 +66,6 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   gridItem: { flexGrow: 1, flexShrink: 1, flexBasis: 280, minWidth: 0 },
   caption: { color: colors.muted, fontSize: 13, lineHeight: 21 },
+  demo: { borderTopWidth: 1, borderColor: colors.border, paddingTop: 20, gap: 6 },
+  demoLink: { color: colors.accent, fontSize: 15, fontWeight: '600', paddingVertical: 10 },
 });
