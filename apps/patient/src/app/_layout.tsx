@@ -7,6 +7,10 @@ export default function RootLayout() {
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" options={{ title: 'MyFHIR | Overview' }} />
+        <Stack.Screen
+          name="profile-inspection"
+          options={{ title: 'MyFHIR | Profile inspection demo' }}
+        />
         <Stack.Screen name="record/[id]" options={{ title: 'MyFHIR | Record' }} />
       </Stack>
     </>

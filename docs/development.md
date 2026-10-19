@@ -1,12 +1,13 @@
 # Development and manual validation
 
-The Phase 1B starting point is `main` at the Phase 1A merge (`9c3cb68`). The maintainer
-reports 72 tests passing and successful TypeScript, ESLint, Prettier and Expo Doctor
-(20/20) checks for that baseline. Phase 1B is source-only: no installation, tests, builds,
+The Phase 1C starting point is the Phase 1B merge (`af9f4ab`), on the required
+`feat/profile-inspector-phase-1c` branch. The maintainer reports 109 tests passing and
+successful TypeScript, ESLint, Prettier and Expo Doctor (20/20) checks for that baseline.
+Phase 1C is source-only: no installation, tests, builds,
 app execution or automated validation were performed. The commands below are for the
-maintainer; no dependencies or lockfile changes are needed for these APIs/tests.
+maintainer; no dependencies or lockfile changes are needed for this screen.
 
-## Validate Phase 1B
+## Validate Phase 1C
 
 ```powershell
 Set-Location 'C:\workspace\active-projects\fhir-native'
@@ -63,7 +64,10 @@ presentation, both choice mappings, absent values, component/boolean non-mapping
 unresolved and version-mismatched profiles, multiple declarations and ambiguous candidates,
 missing/empty snapshots, duplicate paths/IDs/types, slicing/modifiers, fallback priority,
 input preservation and frozen detached hints. Synthetic workspace imports are test-only;
-production renderer code depends only on fhir-core. These new tests have not been run.
+production renderer code depends only on fhir-core. The maintainer subsequently validated
+these tests as part of the Phase 1B baseline. They were not rerun in Phase 1C.
+Phase 1C introduces no new pure engine logic or UI test framework; existing tests remain
+unchanged. UI behavior requires the manual checks below.
 
 ## Public API example (no UI integration)
 
@@ -86,7 +90,7 @@ Observation snapshot. No full FHIR validator has been run on it. See
 [architecture](architecture.md#structuredefinition-inspection-phase-1a) for result types
 and matching policy.
 
-## Profile-informed presentation example (Phase 1B, no UI integration)
+## Profile-informed presentation example (Phase 1B API)
 
 ```typescript
 import { presentResourceWithProfiles } from '@myfhir/fhir-renderer';
@@ -101,17 +105,69 @@ const result = presentResourceWithProfiles(syntheticPulseObservation, [synthetic
 ```
 
 Hints are optional metadata alongside the presentation, never replacement clinical facts.
-No profile text is automatically displayed by the patient app. Missing, ambiguous or
+Patient health-record cards remain profile-unaware; only the separate Phase 1C demo
+displays profile metadata. Missing, ambiguous or
 unsupported correspondences produce no hint and a limitation; they never create fields
 or bypass a generic fallback. Multiple declarations suppress all field hints without
 assigning precedence. For the complete selection policy, see
 [architecture](architecture.md#opt-in-profile-informed-presentation-phase-1b).
 
+## Visual profile inspection demo (Phase 1C)
+
+Start web locally with `npm run web`, then use **Explore FHIR profile inspection (demo)**
+below the overview's patient record cards, or open `/profile-inspection` directly.
+Use **Back to overview** to return. This route is separate from `/record/[id]` and does
+not add the pulse example or StructureDefinition to the patient overview/Bundle.
+
+The screen calls the Phase 1B wrapper with `syntheticPulseObservation` and
+`[syntheticPulseProfile]`. It shows the returned clinical title/fields without changing
+labels or values, declarations and local match status, resolved definition metadata,
+snapshot metadata availability, and only the returned field hints. Unresolved declarations
+remain visible verbatim; canonical URL/version metadata is shown only from resolved
+definitions or explicitly listed ambiguous candidates, not guessed by UI matching logic.
+
+**Profile conformance has not been validated.** Declared, resolved and available are
+separate concepts. Snapshot completeness, clinical validity, trusted terminology and
+normality are not established. mustSupport is labelled profile metadata. No clinical forms,
+external files, network fetching or new validation functionality are provided.
+
+Key boundaries stay visible. Detailed engine limitations and base-renderer notices can
+be expanded with **Show engine notices**. Base notices are explicitly identified as coming
+from the profile-unaware renderer; its unresolved-profile message is not presented as
+overriding the opt-in resolution results. Generic fallback warnings remain visible without
+expansion. No filtered or rewritten notice strings are used.
+
+### Manual browser and mobile smoke checks
+
+- Open the demo via its overview link, reload the direct route, and return to the overview.
+  Confirm patient measurements and existing record links are unchanged.
+- Compare the Observation title, Result, Clinically effective time and Status with the
+  renderer output. Confirm values and labels are preserved, not taken from profile text.
+- Check the exact declaration, resolved canonical URL/business version, profile title/name
+  and available snapshot metadata. Confirm the non-validation boundary stays prominent.
+- Check each returned hint's source path, element path/ID, type code, short text and
+  mustSupport flag. There must be no hint-derived clinical values or compliance indicator.
+- Expand/collapse notices using mouse, touch and keyboard. Check button focus, meaningful
+  headings, readable large text and screen-reader expanded state. Confirm base notices
+  remain distinct from profile resolution results.
+- Test narrow mobile widths and large font settings. Scroll to all sections; long canonical
+  identifiers and paths must wrap within their sections and remain selectable. Check web
+  and, when available, a physical device using the existing compatible Expo Go workflow.
+- For empty/unsupported UI checks, temporarily change only the demo call locally: pass `[]`
+  definitions, use an Observation copy without meta.profile, provide a definition without
+  snapshot, or use a mismatched version. Check unresolved/no-profile/no-hint states without
+  crashes. Duplicate a matching definition to inspect ambiguity. Try a cancelled Observation
+  to verify visible fallback warnings and no field hints. Restore the normal call afterward.
+
+These are maintainer checks, not executed results. The screen handles each returned
+profile/hint independently and does not assume a first profile, a snapshot, two hints or
+populated optional metadata. A missing optional value is labelled **Not supplied**.
+
 ## Maintenance concern
 
 The five advisory families from the Phase 0.2
 [security assessment](security/dependency-audit.md) remain unresolved. They were not
-re-audited in Phase 1B. No dependency changes or security remediation were attempted.
+re-audited in Phase 1C. No dependency changes or security remediation were attempted.
 
 ## Web smoke check
 
@@ -142,6 +198,7 @@ emulator was attempted.
 
 ## Next milestone
 
-Run and review Phase 1B checks before committing. Runtime FHIR/profile validation and
+Run and review Phase 1C checks before committing. Runtime FHIR/profile validation and
 support for the remaining Observation value types are still absent. Wider profile-driven
-rendering, UI integration, snapshot generation and reference resolution remain separate work.
+rendering, patient-facing integration, snapshot generation and reference resolution remain
+separate work.

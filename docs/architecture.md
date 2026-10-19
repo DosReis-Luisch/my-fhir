@@ -107,8 +107,8 @@ not verify whether an explicit snapshot is complete, internally consistent or va
 
 There is no differential merging, inheritance resolution, slicing interpretation,
 FHIRPath, terminology validation, invariant evaluation or cardinality enforcement.
-No profile-aware UI is connected to these APIs. The original `presentResource()` still
-marks profiles unresolved; the Phase 1B wrapper below separately reports local matches.
+The original `presentResource()` still marks profiles unresolved; the Phase 1B wrapper
+below separately reports local matches, now demonstrated in the isolated Phase 1C screen.
 Later work must establish definition provenance/completeness, reference and inheritance
 policies, and safe profile-driven presentation separately from actual conformance validation.
 
@@ -151,10 +151,24 @@ The exact correspondence rules are intentionally small:
 Hint metadata, profile results, limitations and the wrapper are detached/frozen where
 appropriate. The base presentation retains its existing contract and original source
 reference; neither caller resources nor definitions are mutated or frozen. The synthetic
-pulse example supplies a short description for its Quantity choice without UI integration.
+pulse example supplies a short description for its Quantity choice.
 Snapshots may still be incomplete or invalid: these local correspondence guards do not
 evaluate slicing semantics, cardinalities, constraints, inheritance, FHIRPath or terminology.
 This is profile-informed metadata composition, not universal profile-driven rendering.
+
+### Visual profile inspection demo (Phase 1C)
+
+The patient app's `/profile-inspection` route calls the existing wrapper with the synthetic
+pulse Observation and its local StructureDefinition. A labelled developer/demo link sits
+separately below the overview's health-record cards. Existing record navigation, IDs,
+measurements and synthetic Bundle membership are unchanged.
+
+The app renders returned presentation fields, resolution results and field hints only;
+it does not resolve or inspect profiles itself. Resolved, available and validated remain
+distinct. The screen prominently states that profile conformance has not been validated,
+labels mustSupport as metadata, and groups profile-unaware base notices separately from
+opt-in results. Empty/unavailable states do not invent metadata. This read-only engineering
+demo introduces no engine changes, registry, external FHIR inputs or validation behavior.
 
 ### Application and remote-data boundary
 
