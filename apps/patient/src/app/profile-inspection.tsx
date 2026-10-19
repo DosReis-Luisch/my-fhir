@@ -1,10 +1,10 @@
 import { useState, type PropsWithChildren } from 'react';
-import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { DeclaredProfileMatch } from '@myfhir/fhir-core';
 import { presentResourceWithProfiles, type ProfileFieldHint } from '@myfhir/fhir-renderer';
 import { syntheticPulseObservation, syntheticPulseProfile } from '@myfhir/synthetic';
 import { Page } from '../ui/Page';
+import { BackToWallet } from '../ui/BackToWallet';
 import { colors } from '../ui/theme';
 
 function Section({ title, children }: PropsWithChildren<{ title: string }>) {
@@ -118,9 +118,7 @@ export default function ProfileInspection() {
 
   return (
     <Page>
-      <Link href="/" style={styles.link}>
-        ← Back to overview
-      </Link>
+      <BackToWallet fallback="/me" />
       <View style={styles.intro}>
         <Text style={styles.eyebrow}>DEVELOPER / SYNTHETIC DEMO</Text>
         <Text accessibilityRole="header" style={styles.heading}>

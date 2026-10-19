@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { resourceReference } from '@myfhir/fhir-core';
 import { presentResource } from '@myfhir/fhir-renderer';
 import { resources } from '@myfhir/synthetic';
 import { Page } from '../../ui/Page';
+import { BackToWallet } from '../../ui/BackToWallet';
 import { ResourceCard } from '../../ui/ResourceCard';
 import { colors } from '../../ui/theme';
 
@@ -14,9 +15,7 @@ export default function RecordDetails() {
   const resource = resources.find((item) => item.id === id);
   return (
     <Page>
-      <Link href="/" style={styles.link}>
-        ← Back to overview
-      </Link>
+      <BackToWallet fallback="/records" />
       {resource ? (
         <>
           <ResourceCard presentation={presentResource(resource)} />

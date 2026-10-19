@@ -1,5 +1,82 @@
 # Development and manual validation
 
+## Phase 2A wallet routes and manual checks
+
+Source implementation starts from SDK 57 merge `1943722` on
+`feat/patient-wallet-phase-2a`. The repository has 109 existing tests; none was executed
+in this milestone. Dependencies, lockfile, synthetic data and portable engine packages
+are unchanged. No installation, formatter, automated validation, Expo or native build was run.
+
+| URL                   | Area                                                                                          |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| `/`                   | Home tab: compact Patient context and a two-measurement demo snapshot                         |
+| `/records`            | Records tab: compact Patient context, all demo Observations and separate Organization context |
+| `/me`                 | Me tab: synthetic FHIR Patient information, not an authenticated account                      |
+| `/record/[id]`        | Existing record detail outside the tabs                                                       |
+| `/profile-inspection` | Existing read-only developer/demo inspector outside the tabs                                  |
+
+Home moved to `app/(wallet)/index.tsx`; there is no second root index route. The normal
+Expo Router Tabs handle navigation without a custom tab implementation or new icon package.
+Home and Me have separately labelled developer links. Existing native resources and renderer
+values are reused; no complete-history timeline, clinical trends or normality are inferred.
+Home selects two observations in fixed demo order without implying recency. Records retains
+all available demo observations; Me is the primary full Patient summary. Repeated patient
+names, snapshot measurements and record-detail links keep the viewing context explicit.
+
+Run from the repository root in Windows PowerShell:
+
+```powershell
+Set-Location 'C:\workspace\active-projects\fhir-native'
+npm test
+npm run typecheck
+npm run lint
+npm run format:check
+Push-Location apps/patient
+npx expo install --check
+npx expo-doctor@latest
+Pop-Location
+npm run web
+```
+
+Stop web with Ctrl+C. For a physical iPhone or Android device with a compatible SDK 57
+Expo Go client, run `npm run start -- --go` and scan the QR code on a reachable network.
+If the available client does not support SDK 57, use the existing compatible development
+build workflow or web; do not change SDK versions to satisfy the store client. Future native
+health integrations will require a custom build; they are not present in this wallet.
+
+Web/mobile smoke checklist (not executed):
+
+- Check all three labelled tabs, touch targets, keyboard focus and screen-reader labels.
+  Directly open and reload `/`, `/records`, `/me` and `/profile-inspection` on web.
+- On Home, confirm a compact Patient heading and only the blood pressure 118/76 mmHg and
+  heart rate 68 beats/min snapshot. Follow the Records link to all three observations,
+  including weight 72.4 kg. Home and Records must not repeat the full Patient demographics
+  card; Me retains it. Inspect component labels and original values in record details;
+  no additional measurements, recency or normality claims should appear.
+- Open records from Home, Records and Me; Back should return to the originating tab.
+  Check iPhone swipe-back/Android Back, and directly open a known detail URL such as
+  `/record/demo-heart-rate`. With no navigation history, Back falls back to `/records`.
+  Confirm `/record/does-not-exist` remains a readable missing-record state.
+- In Records, keep Organization context distinct from clinical Observations. Its generic
+  fallback notices must remain legible and its existing detail route accessible.
+- In Me, check only renderer-supplied Patient attributes and the explicit synthetic context.
+  There must be no sign-in, connection, sharing, role or fake authorization controls.
+- Open the inspector from Home and Me. Check its non-validation boundary, hints and notices.
+  Back uses history; a direct inspector link with no history falls back to `/me`.
+- On a narrow phone, rotate and increase system font size. Scroll to the final card/footer;
+  neither tab labels nor content may overlap the home indicator or status bar. Long values,
+  resource identifiers and source JSON must wrap. Check larger web/tablet widths as well.
+- Expand/collapse original FHIR source and inspector notices. Confirm they remain selectable
+  and unchanged, with clinical fallback warnings readable at enlarged text sizes.
+
+Page's `inTabs` setting removes only the bottom safe-area edge on tab pages; the navigator
+owns that inset. No fixed/absolute tab-bar positioning or hard-coded device inset was added.
+Layout and native navigation still require these maintainer checks. See
+[product direction](product-direction.md) for future identity, authorization and ingestion work.
+
+The migration notes and validation records below are historical; use the Phase 2A route
+and smoke checklist above for this milestone.
+
 ## SDK 57 preparation and dependency alignment (Phase 1D, step 2)
 
 Starting from Phase 1C merge `206f6dc` on `chore/expo-sdk-57-upgrade`, the manifests
@@ -209,7 +286,8 @@ assigning precedence. For the complete selection policy, see
 
 Start web locally with `npm run web`, then use **Explore FHIR profile inspection (demo)**
 below the overview's patient record cards, or open `/profile-inspection` directly.
-Use **Back to overview** to return. This route is separate from `/record/[id]` and does
+Use **Back** to return to the previous wallet screen (or Me when opened without history).
+This route is separate from `/record/[id]` and does
 not add the pulse example or StructureDefinition to the patient overview/Bundle.
 
 The screen calls the Phase 1B wrapper with `syntheticPulseObservation` and
@@ -285,8 +363,9 @@ Stop with Ctrl+C. For compatible Expo Go on a physical device:
 npm run start -- --go
 ```
 
-Allow network access if prompted and use a client supporting SDK 55. Current iOS store
-clients may require a newer SDK; web remains the Phase 0 baseline. No native build or
+Allow network access if prompted and use a client supporting the current SDK 57. Current
+iOS store clients may require another SDK; use a compatible client or development build
+without changing dependency versions just for the client. No native build or
 emulator was attempted.
 
 ## Next milestone
