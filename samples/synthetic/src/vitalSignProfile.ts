@@ -80,6 +80,7 @@ export const syntheticPulseProfile = {
         max: '1',
         base: { path: 'Observation.value[x]', min: 0, max: '1' },
         type: [{ code: 'Quantity' }],
+        short: 'Synthetic pulse rate as a quantity',
         mustSupport: true,
       },
       {
