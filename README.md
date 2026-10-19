@@ -90,6 +90,9 @@ generic fallback instead of being called unavailable; the original data is retai
 Absent results can show a supplied absence reason. Supported result forms remain limited
 to quantities, supplied coded displays, strings, booleans and integers.
 
-See [architecture](docs/architecture.md) for boundaries and limitations. A possible
-next milestone is a small read-only StructureDefinition experiment
-using curated R4 profiles.
+Phase 1A adds read-only StructureDefinition snapshot inspection and in-memory matching
+of declared profiles in fhir-core. Resolution is explicitly separate from validation;
+the existing renderer and patient app do not invoke these APIs. See
+[architecture](docs/architecture.md#structuredefinition-inspection-phase-1a) and the
+[public API example](docs/development.md#public-api-example-no-ui-integration).
+The new Phase 1A tests and builds have not been executed during implementation.

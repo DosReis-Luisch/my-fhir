@@ -66,6 +66,54 @@ advice is inferred.
 
 ## Current boundary and limitations
 
+### StructureDefinition inspection (Phase 1A)
+
+`fhir-core` exposes two read-only functions using the existing native R4 types:
+
+- `inspectStructureDefinition(definition)` returns `StructureDefinitionInspection`.
+  Its `metadata` copies URL, business version, name, title, description, defined type,
+  kind, derivation and baseDefinition. `status: 'available'` exposes an ordered `elements`
+  array from an explicit nonempty `snapshot.element`. Each entry retains ID, path,
+  sliceName, min/max (including `*`), type codes/profile/targetProfile/versioning,
+  short/definition text and optional mustSupport/isModifier/isSummary flags.
+  No defaults are inferred for absent scalar metadata. Missing type/profile lists become
+  empty arrays. IDs, paths and slice names are distinct; entries are never deduplicated.
+- `matchDeclaredProfiles(resource, definitions)` returns one `DeclaredProfileMatch` for
+  each `meta.profile` declaration in source order, retaining duplicates. Definitions
+  come only from the caller's in-memory collection. No registry or I/O is involved.
+
+All returned metadata, objects and arrays are detached and frozen at runtime, with readonly
+TypeScript types. Inputs are neither mutated nor frozen. This is a selected metadata view,
+not a persisted clinical DTO, a full StructureDefinition schema, or a renderer descriptor.
+
+Canonical matching uses exact, case-sensitive URL equality. For `url|version`, the
+business version must match exactly; an unversioned definition does not satisfy a versioned
+declaration. For a bare URL, exactly one definition must exist; multiple versions are
+ambiguous rather than implicitly choosing the latest. Even duplicate URL/version entries
+remain ambiguous. Candidates retain caller order. These are conservative local matching
+rules, not a universal canonical resolver. See [FHIR R4 canonical references](https://hl7.org/fhir/R4/references.html#canonical).
+
+Results distinguish `resolved`, `ambiguous` (candidate metadata), and `unresolved` with
+`definition-missing`, `version-mismatch`, `resource-type-mismatch` or `unsupported-canonical`.
+A unique match must have `kind: 'resource'` and a type matching the declaring resource.
+Malformed separator/whitespace forms and fragment/contained references are unsupported;
+no URL normalization or full URI validation is attempted.
+
+Both APIs explicitly report `validation: 'not-performed'`. Resolved means that a matching
+definition was found, never that the resource conforms. Resolution can succeed while
+inspection returns `unavailable` with `snapshot-missing` or `snapshot-empty`. Differential
+content is not treated as a snapshot and baseDefinition is not followed. The functions do
+not verify whether an explicit snapshot is complete, internally consistent or valid R4.
+
+There is no differential merging, inheritance resolution, slicing interpretation,
+FHIRPath, terminology validation, invariant evaluation or cardinality enforcement.
+No profile-aware UI or new presentation behavior is connected to these APIs. The renderer
+continues to mark profiles unresolved because it does not invoke the new matching API.
+Later work must establish definition provenance/completeness, reference and inheritance
+policies, and safe profile-driven presentation separately from actual conformance validation.
+
+### Application and remote-data boundary
+
 The synthetic workspace owns one fictional Patient, three Observations (including a
 blood-pressure component example), and one Organization, also exported as a native
 collection Bundle. Overview observations are selected by the exact local Patient
@@ -77,7 +125,8 @@ Compile-time typing does not validate incoming JSON. A future remote/import boun
 must perform runtime FHIR validation before specialized interpretation, including
 resource invariants, value choices, profiles, modifier semantics and terminology.
 FHIR resource IDs alone are not globally unique. Profile declarations are informational
-and are explicitly marked unresolved. This is not universal FHIR/profile support.
+and remain explicitly unresolved in the existing renderer. Callers can separately match
+known local definitions through fhir-core. This is not universal FHIR/profile support.
 
 No authentication, network access, database, server, persistence, cloud services, FHIRPath,
 terminology lookup, full profile resolution, or clinical decision support is implemented.
