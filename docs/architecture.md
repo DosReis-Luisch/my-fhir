@@ -107,10 +107,54 @@ not verify whether an explicit snapshot is complete, internally consistent or va
 
 There is no differential merging, inheritance resolution, slicing interpretation,
 FHIRPath, terminology validation, invariant evaluation or cardinality enforcement.
-No profile-aware UI or new presentation behavior is connected to these APIs. The renderer
-continues to mark profiles unresolved because it does not invoke the new matching API.
+No profile-aware UI is connected to these APIs. The original `presentResource()` still
+marks profiles unresolved; the Phase 1B wrapper below separately reports local matches.
 Later work must establish definition provenance/completeness, reference and inheritance
 policies, and safe profile-driven presentation separately from actual conformance validation.
+
+### Opt-in profile-informed presentation (Phase 1B)
+
+`presentResourceWithProfiles(resource, definitions)` in fhir-renderer composes the unchanged
+`presentResource()` output with `matchDeclaredProfiles()` results. It returns:
+
+- `presentation`: the original ResourcePresentation, including labels, values, notices
+  and original source identity. Its existing profile-unaware notices remain unchanged;
+  the wrapper's `profiles` are the separate authority for local resolution status.
+- `profiles`: declared/resolved/unresolved/ambiguous results, with inspected metadata
+  availability distinct from resolution. All canonical/version decisions remain in core.
+- `fieldHints`: optional sourcePath, declared canonical, profile metadata and element
+  metadata. Hints do not replace labels or resource-supplied terminology.
+- `limitations` and `validation: 'not-performed'`: available metadata is not validated
+  conformance, trusted terminology, clinical normality or proof of snapshot completeness.
+
+The exact correspondence rules are intentionally small:
+
+1. Only an existing Observation presentation can receive hints. Generic fallback always
+   wins, including modifier extensions, unsupported values, cancelled and entered-in-error
+   resources. Other resource types still receive resolution results but no field hints.
+2. Exactly one declaration must be resolved with an available snapshot. Multiple
+   declarations suppress all hints, including duplicates or a mix of resolved/unresolved
+   declarations. No profile precedence or version preference is introduced.
+3. Only existing top-level `valueQuantity` and `effectiveDateTime` presentation fields
+   are considered. They map explicitly to `Observation.value[x]` with Quantity and
+   `Observation.effective[x]` with dateTime respectively. No components, other value
+   choices or arbitrary element paths are mapped. Source paths are not FHIRPath.
+4. A target path must occur exactly once, have its exact unsliced path as ID, and have
+   that ID occur exactly once in the snapshot. Slice names, sliced IDs, modifier elements,
+   slicing declarations and element modifier extensions suppress that field's hint.
+   Definition-level modifier extensions suppress all hints. Source definitions are
+   recovered through core's matcher to inspect safety metadata omitted by Phase 1A.
+5. The corresponding type code must occur exactly once in the element's declared types;
+   other choice types may coexist. Missing or incompatible types suppress hints. No
+   metadata can create a resource value, even if min or mustSupport suggests an obligation.
+
+Hint metadata, profile results, limitations and the wrapper are detached/frozen where
+appropriate. The base presentation retains its existing contract and original source
+reference; neither caller resources nor definitions are mutated or frozen. The synthetic
+pulse example supplies a short description for its Quantity choice without UI integration.
+Snapshots may still be incomplete or invalid: these local correspondence guards do not
+evaluate slicing semantics, cardinalities, constraints, inheritance, FHIRPath or terminology.
+This is profile-informed metadata composition, not universal profile-driven rendering.
 
 ### Application and remote-data boundary
 
@@ -125,8 +169,9 @@ Compile-time typing does not validate incoming JSON. A future remote/import boun
 must perform runtime FHIR validation before specialized interpretation, including
 resource invariants, value choices, profiles, modifier semantics and terminology.
 FHIR resource IDs alone are not globally unique. Profile declarations are informational
-and remain explicitly unresolved in the existing renderer. Callers can separately match
-known local definitions through fhir-core. This is not universal FHIR/profile support.
+and remain explicitly unresolved in the original renderer. Callers can separately match
+known local definitions through fhir-core or opt into the Phase 1B composition. This is
+not universal FHIR/profile support.
 
 No authentication, network access, database, server, persistence, cloud services, FHIRPath,
 terminology lookup, full profile resolution, or clinical decision support is implemented.

@@ -1,12 +1,12 @@
 # Development and manual validation
 
-The Phase 1A starting point is `main` at the Phase 0.2 merge (`de29133`). The maintainer
-reports 46 tests passing and successful TypeScript, ESLint, Prettier and Expo Doctor
-checks for the prior baseline. Phase 1A is source-only: no installation, tests, builds,
+The Phase 1B starting point is `main` at the Phase 1A merge (`9c3cb68`). The maintainer
+reports 72 tests passing and successful TypeScript, ESLint, Prettier and Expo Doctor
+(20/20) checks for that baseline. Phase 1B is source-only: no installation, tests, builds,
 app execution or automated validation were performed. The commands below are for the
 maintainer; no dependencies or lockfile changes are needed for these APIs/tests.
 
-## Validate Phase 1A
+## Validate Phase 1B
 
 ```powershell
 Set-Location 'C:\workspace\active-projects\fhir-native'
@@ -57,6 +57,14 @@ ambiguous candidates, wrong resource type/kind, unsupported canonical forms, non
 semantics, detached immutable output and non-mutation of inputs. No browser, network,
 Expo or backend is needed for these tests.
 
+Phase 1B adds `packages/fhir-renderer/tests/profilePresentation.test.ts` while retaining
+all 72 prior tests. Cases cover the real synthetic workspace example, unchanged base
+presentation, both choice mappings, absent values, component/boolean non-mapping,
+unresolved and version-mismatched profiles, multiple declarations and ambiguous candidates,
+missing/empty snapshots, duplicate paths/IDs/types, slicing/modifiers, fallback priority,
+input preservation and frozen detached hints. Synthetic workspace imports are test-only;
+production renderer code depends only on fhir-core. These new tests have not been run.
+
 ## Public API example (no UI integration)
 
 ```typescript
@@ -78,11 +86,32 @@ Observation snapshot. No full FHIR validator has been run on it. See
 [architecture](architecture.md#structuredefinition-inspection-phase-1a) for result types
 and matching policy.
 
+## Profile-informed presentation example (Phase 1B, no UI integration)
+
+```typescript
+import { presentResourceWithProfiles } from '@myfhir/fhir-renderer';
+import { syntheticPulseObservation, syntheticPulseProfile } from '@myfhir/synthetic';
+
+const result = presentResourceWithProfiles(syntheticPulseObservation, [syntheticPulseProfile]);
+// result.presentation retains the original labels, values, notices and source.
+// result.profiles[0] is resolved; its snapshot metadata is available.
+// result.fieldHints associates valueQuantity/effectiveDateTime with their choice elements.
+// The Quantity hint includes short: 'Synthetic pulse rate as a quantity'.
+// result.validation is always 'not-performed'.
+```
+
+Hints are optional metadata alongside the presentation, never replacement clinical facts.
+No profile text is automatically displayed by the patient app. Missing, ambiguous or
+unsupported correspondences produce no hint and a limitation; they never create fields
+or bypass a generic fallback. Multiple declarations suppress all field hints without
+assigning precedence. For the complete selection policy, see
+[architecture](architecture.md#opt-in-profile-informed-presentation-phase-1b).
+
 ## Maintenance concern
 
 The five advisory families from the Phase 0.2
 [security assessment](security/dependency-audit.md) remain unresolved. They were not
-re-audited in Phase 1A. No dependency changes or security remediation were attempted.
+re-audited in Phase 1B. No dependency changes or security remediation were attempted.
 
 ## Web smoke check
 
@@ -113,6 +142,6 @@ emulator was attempted.
 
 ## Next milestone
 
-Run and review Phase 1A checks before committing. Runtime FHIR/profile validation and
-support for the remaining Observation value types are still absent. Profile-driven
-presentation, snapshot generation and reference resolution remain separate later work.
+Run and review Phase 1B checks before committing. Runtime FHIR/profile validation and
+support for the remaining Observation value types are still absent. Wider profile-driven
+rendering, UI integration, snapshot generation and reference resolution remain separate work.

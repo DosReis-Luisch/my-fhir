@@ -1,8 +1,24 @@
-import { conceptText, patientName, resourceReference, type FhirResource } from '@myfhir/fhir-core';
+import {
+  conceptText,
+  patientName,
+  resourceReference,
+  type FhirResource,
+  type StructureDefinition,
+} from '@myfhir/fhir-core';
 import type { ResourcePresentation } from './descriptor';
 import { hasUnsupportedObservationResult, observationFields } from './observation';
+import { addProfileMetadata, type ProfileInformedPresentation } from './profilePresentation';
 
 export type { PresentationField, ResourcePresentation } from './descriptor';
+export type { ProfileFieldHint, ProfileInformedPresentation } from './profilePresentation';
+
+/** Opt-in metadata composition; the existing presentation and its fallback rules take priority. */
+export function presentResourceWithProfiles(
+  resource: FhirResource,
+  definitions: readonly StructureDefinition[],
+): ProfileInformedPresentation {
+  return addProfileMetadata(presentResource(resource), definitions);
+}
 
 // Modifier extensions may change the meaning of any element. Until supported,
 // conservatively fall back rather than displaying potentially misleading facts.
