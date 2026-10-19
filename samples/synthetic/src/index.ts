@@ -4,6 +4,7 @@ import { patient } from './patient';
 
 export { observations } from './observations';
 export { patient } from './patient';
+export { syntheticPulseObservation, syntheticPulseProfile } from './vitalSignProfile';
 
 export const organization = {
   resourceType: 'Organization',

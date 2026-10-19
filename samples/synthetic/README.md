@@ -12,3 +12,15 @@ the exported Bundle can be serialized without conversion to another clinical mod
 The Patient includes an ordinary extension deliberately left uninterpreted. Terminology
 labels and units are supplied in the resources. No profile compliance or full FHIR validation
 is claimed. Do not replace these fixtures with real patient data.
+
+Phase 1A exports `syntheticPulseProfile` and `syntheticPulseObservation` from
+`src/vitalSignProfile.ts`. The draft, experimental R4 StructureDefinition constrains a
+fictional pulse Observation with a small curated snapshot: status, LOINC heart-rate code,
+Patient subject, clinically effective dateTime and Quantity result. Its URL is
+`https://myfhir.example/StructureDefinition/synthetic-pulse`, version `1.0.0`; the example
+Observation declares the exact `url|version` in `meta.profile`.
+
+These exports deliberately remain outside the patient overview's existing resources
+and Bundle. The snapshot contains selected elements, not the complete inherited R4
+Observation structure. It is suitable for metadata inspection, not production validation
+or a published implementation guide. Matching the declaration never establishes conformance.

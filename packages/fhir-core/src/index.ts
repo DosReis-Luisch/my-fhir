@@ -10,7 +10,19 @@ export type {
   Patient,
   Quantity,
   FhirResource,
+  StructureDefinition,
+  ElementDefinition,
 } from 'fhir/r4';
+
+export { inspectStructureDefinition } from './structureDefinition';
+export type {
+  ElementMetadata,
+  ElementTypeMetadata,
+  StructureDefinitionInspection,
+  StructureDefinitionMetadata,
+} from './structureDefinition';
+export { matchDeclaredProfiles } from './profiles';
+export type { DeclaredProfileMatch } from './profiles';
 
 export function isResource<T extends FhirResource['resourceType']>(
   resource: FhirResource,
