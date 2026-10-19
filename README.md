@@ -64,19 +64,21 @@ native support libraries follow the SDK 55 bundled dependency map. References:
 [Expo monorepos](https://docs.expo.dev/guides/monorepos/).
 This is a documented stable baseline, not a claim to use the newest SDK.
 
-Phase 0 was validated locally by the maintainer and committed as `50dfc6d`: web startup,
-TypeScript, ESLint, Prettier and Expo Doctor passed. Remaining npm audit findings are an
-unresolved maintenance concern; they have not been re-audited or remediated in Phase 0.1.
+The maintainer validated Phase 0.1 (commit `ab570f5`): web startup, 46/46 tests,
+TypeScript, ESLint, Prettier and Expo Doctor (20/20) passed. Phase 0.2 documents the
+35-finding audit snapshot and remediation constraints in the
+[dependency security assessment](docs/security/dependency-audit.md). The five underlying
+advisories remain unresolved; no dependency changes or new validation were performed.
 
 Phase 0.1 adds Vitest for focused, deterministic shared-package tests. `npm test` runs once
 in Node without watch mode, Expo, a browser or UI mocks. Tests cover Patient identity and
 missing demographics, Observation results/components/time/status, conservative fallbacks,
 unresolved profiles and source preservation. See [development](docs/development.md) for
-the complete manual validation sequence. These new tests and checks have **not been run**.
+the complete manual validation sequence. These checks were not rerun during Phase 0.2.
 
-Run `npm install` to resolve the new test dependency and update the existing root
-`package-lock.json`; review that diff before committing. The lockfile was not edited by
-hand. Use `npm ci` only after the manifest and lockfile have been synchronized.
+The committed root `package-lock.json` captures the validated dependency baseline.
+Use `npm ci` for a clean installation. Future manifest changes require `npm install`
+and review of the generated lockfile diff before committing.
 
 FHIR definitions come from `@types/fhir` via its explicit `fhir/r4` entry point.
 Types are not runtime schema or profile validation. There is no server, persistence,
@@ -88,6 +90,6 @@ generic fallback instead of being called unavailable; the original data is retai
 Absent results can show a supplied absence reason. Supported result forms remain limited
 to quantities, supplied coded displays, strings, booleans and integers.
 
-See [architecture](docs/architecture.md) for boundaries and limitations. After validating
-Phase 0.1, a possible next milestone is a small read-only StructureDefinition experiment
+See [architecture](docs/architecture.md) for boundaries and limitations. A possible
+next milestone is a small read-only StructureDefinition experiment
 using curated R4 profiles.
