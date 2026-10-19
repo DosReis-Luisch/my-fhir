@@ -1,5 +1,98 @@
 # Development and manual validation
 
+## SDK 57 preparation and dependency alignment (Phase 1D, step 2)
+
+Starting from Phase 1C merge `206f6dc` on `chore/expo-sdk-57-upgrade`, the manifests
+now target SDK 57. The maintainer's SDK 56 installation/lockfile changes were preserved.
+SDK 56 results: 109/109 tests, TypeScript and ESLint passed; font deduplicated to `56.0.7`;
+TypeScript `6.0.3` and typescript-eslint `8.71.2` installed; Expo Doctor **20/22**;
+audit snapshot **29 findings**. Unrelated formatting differences remain pending. None of
+these results establishes SDK 57 compatibility, and no new validation has been executed.
+
+App versions follow the official [SDK 57 template](https://github.com/expo/expo/blob/sdk-57/templates/expo-template-default/package.json)
+and [bundled mapping](https://github.com/expo/expo/blob/sdk-57/packages/expo/bundledNativeModules.json):
+Expo `~57.0.30`, React/React DOM `19.2.3`, React Native `0.86.3`, Router `~57.0.28`,
+Metro runtime `~57.0.17`, constants `~57.0.22`, font `~57.0.4`, linking `~57.0.13`,
+and status bar `~57.0.1`. React Native Web `~0.21.0`, safe-area context `~5.7.0`,
+screens `~4.26.0`, React types `~19.2.2` and root TypeScript `~6.0.3` remain unchanged.
+The maintainer's root typescript-eslint range `^8.58.0` is preserved.
+
+### Why root peers need alignment
+
+The SDK 56 lockfile provides concrete dependency edges:
+
+- Router `56.2.21` depends on drawer-layout `4.2.12`, which requires Reanimated
+  `>=2.0.0` and Gesture Handler `>=2.0.0` as non-optional peers. Router itself marks
+  these peers optional; that does not remove the drawer package's requirements.
+- npm selected peer-installed Reanimated `4.7.1` and Gesture Handler `3.4.0` at the
+  root. Reanimated requires Worklets `0.13.x` and RN `0.86 - 0.88`; Worklets `0.13.0`
+  has the same RN range. Root RN `0.88.0` then requires React `^19.3.0`, consistent
+  with the root peer-installed React `19.3.1`. App-local RN `0.85.3` and React `19.2.3`
+  remained separate. Root peer packages cannot resolve dependencies down inside the app.
+- Expo UI's optional Worklets `*` peer is another unconstrained consumer. Meanwhile,
+  modules-core `56.0.27` allows only Worklets `^0.7.4 || ^0.8.0`, so the installed
+  `0.13.0` is incompatible. Root React/RN packages carry the lockfile's `peer: true`
+  marker. These edges strongly explain the drift; the lockfile alone does not establish
+  npm's precise selection order or every contributing peer consumer.
+
+The app now explicitly depends on SDK-mapped Reanimated **4.5.1**, Worklets **0.10.1**
+and Gesture Handler **~2.32.0**, rather than leaving native peer selection to broad ranges.
+These are compatibility declarations, not new UI features. SDK 57
+[modules-core](https://github.com/expo/expo/blob/sdk-57/packages/expo-modules-core/package.json)
+accepts Worklets `^0.10.0`; the template selects the exact same trio.
+
+The root has matching **devDependencies** for React, React DOM, React Native and that
+native trio. These explicit anchors constrain hoisted tooling/peer consumers to the same
+SDK family instead of leaving the root free to select latest compatible peers independently
+of the app. They do not add React imports or runtime dependencies to the FHIR workspaces.
+Keep the six root/app declarations synchronized in future migrations. No overrides,
+force/legacy-peer-deps flags or warning suppressions were introduced. The obsolete SDK 55
+font override remains removed.
+
+### Maintainer installation and validation
+
+The lockfile was not edited in this step and still captures the SDK 56 install. Run
+`npm install` locally to regenerate it; do not discard the existing lockfile or use
+`npm ci` while it disagrees with the manifests. Review the generated diff. The declarations
+are intended to correct alignment, but final hoisting/deduplication cannot be confirmed
+without installation. Preserve any installation warnings as evidence rather than bypassing them.
+
+```powershell
+npm install
+npm ls expo expo-router expo-modules-core expo-font typescript typescript-eslint --all
+npm ls react react-dom react-native --all
+npm ls react-native-reanimated react-native-worklets react-native-gesture-handler --all
+npm explain react
+npm explain react-native
+npm explain react-native-worklets
+npm explain react-native-reanimated
+npm test
+npm run typecheck
+npm run lint
+npm run format:check
+Push-Location apps/patient
+npx expo install --check
+npx expo-doctor@latest
+Pop-Location
+npm run web
+```
+
+Expect one physical React `19.2.3`, React Native `0.86.3`, Worklets `0.10.1` and
+Reanimated `4.5.1`, with Gesture Handler in the `2.32.x` family and font in `57.0.x`.
+Repeated `deduped` references are fine; separate installed copies or `invalid`/peer
+warnings need investigation even if tests pass. If duplicates remain, stop and review
+the tree and explanation output; do not add broad overrides, delete the lockfile or
+suppress peers automatically.
+
+Check overview, record navigation, direct-route reloads and `/profile-inspection` manually.
+The [SDK 57 release notes](https://expo.dev/changelog/sdk-57) identify RN `0.86.3` as
+including the Hermes V1 memory-regression fix; native behavior still needs separate
+verification with a compatible SDK 57 client/build. No native directories, builds or UI
+changes were made. Doctor is not yet confirmed passing, the security findings have not
+been re-audited, and formatting remains a maintainer check after final installation.
+Stop at SDK 57 preparation and review the maintainer's results before further changes.
+The older milestone instructions below are historical; use this section during migration.
+
 The Phase 1C starting point is the Phase 1B merge (`af9f4ab`), on the required
 `feat/profile-inspector-phase-1c` branch. The maintainer reports 109 tests passing and
 successful TypeScript, ESLint, Prettier and Expo Doctor (20/20) checks for that baseline.
