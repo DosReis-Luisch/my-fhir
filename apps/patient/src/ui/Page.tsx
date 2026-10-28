@@ -3,9 +3,12 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from './theme';
 
-export function Page({ children }: PropsWithChildren) {
+export function Page({ children, inTabs = false }: PropsWithChildren<{ inTabs?: boolean }>) {
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView
+      style={styles.safe}
+      edges={inTabs ? ['top', 'left', 'right'] : ['top', 'left', 'right', 'bottom']}
+    >
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.content}>
           <View style={styles.brandRow}>
@@ -29,8 +32,8 @@ export function Page({ children }: PropsWithChildren) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  scroll: { paddingHorizontal: 22, paddingVertical: 28 },
-  content: { width: '100%', maxWidth: 1040, alignSelf: 'center', gap: 24 },
+  scroll: { paddingHorizontal: 20, paddingVertical: 24 },
+  content: { width: '100%', maxWidth: 1040, alignSelf: 'center', gap: 20 },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',

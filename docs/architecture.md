@@ -1,5 +1,8 @@
 # Architecture
 
+See [product direction](product-direction.md) for the patient-first wallet, future
+professional workspaces, distinct identity/access concepts and future integration boundaries.
+
 ## Direction of dependencies
 
 ```text
@@ -171,6 +174,19 @@ opt-in results. Empty/unavailable states do not invent metadata. This read-only 
 demo introduces no engine changes, registry, external FHIR inputs or validation behavior.
 
 ### Application and remote-data boundary
+
+Phase 2A uses Expo Router's standard Tabs in `app/(wallet)` for Home (`/`), Records
+(`/records`) and Me (`/me`). Record details (`/record/[id]`) and the developer inspector
+(`/profile-inspection`) remain in the outer Stack. The group does not change public URLs.
+Tab pages omit Page's bottom safe-area edge because the normal, non-overlay tab bar owns
+that inset. Detail/developer pages retain all safe-area edges. Back navigation uses router
+history with direct-link fallbacks to Records or Me.
+
+`apps/patient/src/data/demoRecords.ts` selects existing native Observations by exact Patient
+reference and lists Organization context separately. It is a read-only demo selector, not an
+authorization check, reference resolver or clinical repository. All clinical presentation
+still comes from the unchanged renderer. Me describes the Patient context, not an account.
+No sample IDs, resource shapes or Bundle membership changed in Phase 2A.
 
 The synthetic workspace owns one fictional Patient, three Observations (including a
 blood-pressure component example), and one Organization, also exported as a native
