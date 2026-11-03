@@ -2,6 +2,8 @@ import { createAcquisitionStore } from '@myfhir/fhir-acquisition';
 import { buildClinicalCatalog, type CatalogItem } from '@myfhir/fhir-catalog';
 import type { FhirResource } from '@myfhir/fhir-core';
 import {
+  conditions,
+  conditionsContext,
   imagingContext,
   imagingStudy,
   radiologyReport,
@@ -39,6 +41,22 @@ for (const resource of [imagingStudy, radiologyReport]) {
   const result = store.acquire({
     sourceNamespace: imagingContext.sourceNamespace,
     patientContext: imagingContext,
+    resource,
+  });
+  if (result.status === 'rejected' || result.status === 'conflict') {
+    issues.push(`${resource.id}: ${result.reason}`);
+  }
+}
+if (
+  conditionsContext.sourceNamespace !== recordsContext.sourceNamespace ||
+  conditionsContext.patientId !== recordsContext.patientId
+) {
+  throw new Error('Synthetic Conditions must explicitly share the declared demo context.');
+}
+for (const resource of conditions) {
+  const result = store.acquire({
+    sourceNamespace: conditionsContext.sourceNamespace,
+    patientContext: conditionsContext,
     resource,
   });
   if (result.status === 'rejected' || result.status === 'conflict') {

@@ -32,6 +32,8 @@ describe('shared patient catalog adapters', () => {
       ['laboratory', 2],
       ['radiology-report', 1],
       ['imaging-study', 1],
+      ['problem-list-item', 1],
+      ['encounter-diagnosis', 1],
     ]);
     for (const item of recordsCatalog.groups[0]!.items) {
       const original = observations.find((resource) => resource.id === item.identity.logicalId)!;

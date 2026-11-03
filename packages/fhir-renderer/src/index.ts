@@ -6,6 +6,7 @@ import {
   type StructureDefinition,
 } from '@myfhir/fhir-core';
 import type { ResourcePresentation } from './descriptor';
+import { conditionSummary } from './condition';
 import { diagnosticReportSummary } from './diagnosticReport';
 import { imagingStudySummary } from './imagingStudy';
 import { hasUnsupportedObservationResult, observationFields } from './observation';
@@ -63,6 +64,29 @@ export function presentResource(resource: FhirResource): ResourcePresentation {
     ]);
   }
   switch (resource.resourceType) {
+    case 'Condition': {
+      const summary = conditionSummary(resource);
+      if (!summary.supported) {
+        return fallback(resource, [
+          ...notices,
+          'Recorded Condition assertion only; a diagnosis is not established by this application.',
+          ...summary.issues,
+        ]);
+      }
+      return {
+        kind: 'condition',
+        title: summary.title,
+        subtitle: 'Recorded clinical assertion',
+        fields: summary.fields,
+        notices: [
+          ...notices,
+          'Source-supplied statuses are recorded assertions, including confirmed; no independent medical validation is performed.',
+          'Missing abatement does not establish current activity. Dates retain source precision without date validation or conversion.',
+          'Severity, stage, body sites and evidence are not clinically interpreted.',
+        ],
+        source: resource,
+      };
+    }
     case 'ImagingStudy': {
       const summary = imagingStudySummary(resource);
       if (!summary) {

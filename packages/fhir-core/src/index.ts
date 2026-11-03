@@ -4,6 +4,7 @@ import type { CodeableConcept, FhirResource, HumanName } from 'fhir/r4';
 export type {
   Bundle,
   CodeableConcept,
+  Condition,
   DiagnosticReport,
   HumanName,
   ImagingStudy,
@@ -25,6 +26,22 @@ export type {
 } from './structureDefinition';
 export { matchDeclaredProfiles } from './profiles';
 export { hasSupportedImagingStudyMetadata } from './imagingStudy';
+export {
+  conditionCategorySystem,
+  conditionClinicalSystem,
+  conditionVerificationSystem,
+  hasSupportedConditionMetadata,
+  inspectConditionStatuses,
+  inspectConditionCategory,
+} from './condition';
+export type {
+  ConditionCategoryCode,
+  ConditionClinicalCode,
+  ConditionVerificationCode,
+  ConditionCodingEvidence,
+  ConditionStatusSelection,
+  ConditionStatusInspection,
+} from './condition';
 export type { DeclaredProfileMatch } from './profiles';
 
 export function isResource<T extends FhirResource['resourceType']>(

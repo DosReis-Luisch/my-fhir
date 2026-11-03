@@ -33,6 +33,8 @@ describe('synthetic imaging Records flow', () => {
       ['laboratory', 2],
       ['radiology-report', 1],
       ['imaging-study', 1],
+      ['problem-list-item', 1],
+      ['encounter-diagnosis', 1],
     ]);
     const report = recordsCatalog.items.find(
       (item) => item.identity.logicalId === radiologyReport.id,
