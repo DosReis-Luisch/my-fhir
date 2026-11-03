@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { resourceReference } from '@myfhir/fhir-core';
 import { presentResource } from '@myfhir/fhir-renderer';
@@ -7,7 +7,12 @@ import { resources } from '@myfhir/synthetic';
 import { Page } from '../../ui/Page';
 import { BackToWallet } from '../../ui/BackToWallet';
 import { ResourceCard } from '../../ui/ResourceCard';
-import { findCatalogRecord, rendererNativeResource } from '../../data/clinicalCatalog';
+import {
+  catalogRecordParams,
+  findCatalogRecord,
+  rendererNativeResource,
+  recordsCatalog,
+} from '../../data/clinicalCatalog';
 import { colors } from '../../ui/theme';
 
 export default function RecordDetails() {
@@ -27,12 +32,63 @@ export default function RecordDetails() {
     : qualified
       ? undefined
       : resources.find((item) => item.id === params.id);
+  const presentation = resource ? presentResource(resource) : undefined;
   return (
     <Page>
       <BackToWallet fallback="/records" />
       {resource ? (
         <>
-          <ResourceCard presentation={presentResource(resource)} />
+          {presentation ? <ResourceCard presentation={presentation} /> : null}
+          {catalogItem?.resourceType === 'DiagnosticReport' ? (
+            <View style={styles.source}>
+              <Text accessibilityRole="header" style={styles.title}>
+                Supplied result references
+              </Text>
+              <Text style={styles.caption}>
+                Links identify local records, not clinical validation or approval of report/results.
+                Report and result statuses are independent. No reference ranges are interpreted.
+              </Text>
+              {!catalogItem.relationships.length ? (
+                <Text style={styles.caption}>No result references supplied.</Text>
+              ) : null}
+              {catalogItem.relationships.map((relationship) => {
+                const target =
+                  relationship.resolution === 'resolved'
+                    ? recordsCatalog.items.find((item) => item.record === relationship.target)
+                    : undefined;
+                return (
+                  <View key={relationship.path} style={styles.source}>
+                    <Text selectable style={styles.caption}>
+                      {relationship.path}:{' '}
+                      {relationship.reference ?? 'Unsupported reference assertion'}
+                    </Text>
+                    {target && presentation?.kind === 'diagnostic-report' ? (
+                      <ResourceCard
+                        presentation={presentResource(rendererNativeResource(target))}
+                        recordParams={catalogRecordParams(target)}
+                        compact
+                      />
+                    ) : target ? (
+                      <Link
+                        href={{ pathname: '/record/[id]', params: catalogRecordParams(target) }}
+                        style={styles.link}
+                        accessibilityLabel={`View original result ${target.identity.logicalId}`}
+                      >
+                        View original Observation: {target.identity.logicalId}
+                      </Link>
+                    ) : (
+                      <Text style={styles.caption}>
+                        Unresolved:{' '}
+                        {relationship.resolution === 'unresolved'
+                          ? relationship.reason
+                          : 'local-target-unavailable'}
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
           <View style={styles.source}>
             {catalogItem ? (
               <Text selectable style={styles.caption}>
@@ -68,6 +124,7 @@ export default function RecordDetails() {
 }
 
 const styles = StyleSheet.create({
+  title: { color: colors.ink, fontSize: 20, fontWeight: '600' },
   link: { color: colors.accent, fontSize: 15, fontWeight: '600', paddingVertical: 6 },
   caption: { color: colors.muted, fontSize: 13, lineHeight: 21 },
   source: { gap: 10 },

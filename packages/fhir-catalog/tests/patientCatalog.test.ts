@@ -28,6 +28,8 @@ describe('shared patient catalog adapters', () => {
     );
     expect(recordsCatalog.groups.map((group) => [group.category, group.items.length])).toEqual([
       ['vital-signs', 3],
+      ['laboratory-report', 1],
+      ['laboratory', 2],
     ]);
     for (const item of recordsCatalog.groups[0]!.items) {
       const original = observations.find((resource) => resource.id === item.identity.logicalId)!;

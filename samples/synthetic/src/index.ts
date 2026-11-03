@@ -4,6 +4,7 @@ import { patient } from './patient';
 
 export { observations } from './observations';
 export { patient } from './patient';
+export { laboratoryContext, laboratoryObservations, laboratoryReport } from './laboratory';
 export { weightHistory, weightHistoryContext } from './weightHistory';
 export { syntheticPulseObservation, syntheticPulseProfile } from './vitalSignProfile';
 

@@ -430,8 +430,9 @@ mobile and later adapters. It depends on acquisition/core and uses longitudinal 
 types; it does not import React, Expo, Node/browser APIs, sample data or the renderer.
 There are no external runtime dependencies, network calls, terminology lookups, storage,
 authentication or plugin framework. Acquisition, renderer and longitudinal implementation
-code is unchanged. Workspace installation and lockfile regeneration are maintainer steps;
-Phase 4A is source-only and **awaiting validation**, not complete.
+code was unchanged in Phase 4A. Phase 4A merged through **PR #11**, commit `af1a7c2`;
+web/iPhone runtime verification remains outstanding. The foundation described in this section
+is extended by the [Phase 4B slice](#laboratory-results-and-diagnosticreports-phase-4b) below.
 
 `buildClinicalCatalog(records, patientContext, histories = [])` accepts immutable acquired
 Patient/Observation snapshots and one explicit source-qualified Patient context. It returns
@@ -510,9 +511,9 @@ and planned-other-history section labels; its actual weight series/list/chart st
 exclusively from the unchanged longitudinal engine.
 
 Additional categories are design direction: imaging/examinations, reports/documents,
-conditions/diagnoses, medications, immunizations and procedures. Acquisition still rejects
-DiagnosticReport, ImagingStudy, DocumentReference, Condition and every type other than
-Patient/Observation. A future resolver must use explicit same-source and patient context,
+conditions/diagnoses, medications, immunizations and procedures. Phase 4A acquisition supported
+only Patient/Observation; Phase 4B below adds DiagnosticReport. ImagingStudy, DocumentReference,
+Condition and other types remain unsupported. A future general resolver must use explicit same-source and patient context,
 type/ID and requested version, preserve missing/ambiguous targets, review shared/non-patient
 and contained/absolute-reference policies, and enforce authorization separately before any
 fetch. DiagnosticReport results may reference multiple Observations; they are not a single
@@ -523,8 +524,129 @@ laboratory interpretation or universal FHIR classification exists in this milest
 
 Focused tests in `packages/fhir-catalog/tests` cover classification, ambiguity, unsupported
 forms, isolation, versions, immutable output, preservation, deterministic groups, unresolved
-relationships, engine capability evidence and shared Records/Trends adapters. They have not
-been executed. Maintainer validation must register the workspace, regenerate/review the
-lockfile, run focused/full tests and TypeScript/lint/format checks, verify Expo compatibility,
-then exercise web/iPhone Records/details and unchanged Trends/ranges/accessibility. The
+relationships, engine capability evidence and shared Records/Trends adapters. No checks were
+executed during the Phase 4A implementation turn; this document does not supply new results.
+The workspace/lockfile were included in the Phase 4A merge. Outstanding checks include
+web/iPhone Records/details and unchanged Trends/ranges/accessibility. The
 November 3 SDK 57 dependency-security baseline and its release prerequisites remain in force.
+
+### Laboratory results and DiagnosticReports (Phase 4B)
+
+Data flow is native FHIR acquisition -> clinical catalog -> explicit local report/result
+relationships -> renderer and Records UI. This source-only slice is **awaiting maintainer
+validation and GitHub code review; not complete**. It adds no workspace, external dependency,
+backend, networking, persistence, authentication or terminology service. The November 3
+SDK 57 security assessment remains unchanged and unresolved; synthetic demonstration and
+local context checks are not authorization, clinical validation or production approval.
+
+`fhir-core` now exports native R4 `DiagnosticReport`. Acquisition accepts exactly Patient,
+Observation and DiagnosticReport; other resource types remain rejected. Reports retain the
+existing immutable JSON snapshot, source/type/logical-ID identity, separate optional version,
+duplicate/content-conflict semantics and explicit source-qualified Patient context. All
+recognized R4 report statuses are accepted structurally, including partial/appended and
+cancelled/entered-in-error; acquisition is not presentation eligibility. Code must be an
+object with nonempty text and/or a nonempty coding array of object entries with nonempty
+codes and optional nonempty systems. Malformed supplied text/coding is rejected as
+`invalid-diagnostic-report-shape`. No terminology or comprehensive CodeableConcept validation
+is claimed. Exact relative `Patient/<id>` subject association and bounded plain-JSON guards
+are unchanged; missing, foreign, identifier-only and ambiguous subjects are rejected.
+Unsupported fields, unknown properties, extensions and attachments remain in the snapshot.
+
+A **DiagnosticReport** is a report record that may reference several individual results;
+an **Observation** remains an independently identified result with its own status, category,
+values and dates. The report's category never classifies its referenced Observations.
+Catalog classification is exact and case-sensitive, with distinct coding systems:
+
+- Observation rules remain unchanged: unversioned
+  `http://terminology.hl7.org/CodeSystem/observation-category` with `vital-signs` or
+  `laboratory`, with all supplied category codings supported and agreeing.
+- DiagnosticReport uses only unversioned
+  `http://terminology.hl7.org/CodeSystem/v2-0074` with `LAB`. All supplied category
+  concepts/codings must be supported and agree; repeated LAB evidence does not duplicate
+  the report. Unknown, conflicting, malformed, versioned or modifier-bearing categories
+  remain unclassified, with retained evidence and reasons. Code text such as laboratory,
+  blood or analysis never determines category.
+
+`ClinicalCategory` adds `laboratory-report`; `diagnosticReportCategorySystem` is exported.
+Nonempty groups order vital signs, laboratory reports, laboratory results, other/unclassified.
+Reports are included in groups, including unclassified reports; Patient remains context only.
+Report counts and result counts are separate record counts, not a count of clinical events.
+Versions remain separate descriptors with no latest-version inference.
+
+`buildClinicalCatalog` keeps its signature. `CatalogRelationship` is now a readonly union:
+`kind` is assertion or report-result, with supplied path/reference/source context; unresolved
+relationships have a `RelationshipIssue` reason, while resolved ones retain the exact target
+`AcquiredResource`. It does not contain recursive CatalogItem graphs or copied result values.
+Only DiagnosticReport.result has local resolution; existing Observation assertions remain
+unresolved exactly as before. Result references resolve only when:
+
+1. The supplied result collection is an array and its entry asserts exactly
+   `Observation/<logical-id>` with no identifier assertion or incompatible type. Absolute,
+   contained, versioned, identifier-only, malformed and other-type references are unsupported.
+2. A supplied target Observation has the report's exact source namespace and patient context.
+   A matching bare ID in another source/patient does not qualify.
+3. All retained same-source target identities are considered before patient filtering.
+   Multiple versions, including absent plus supplied version, yield
+   `multiple-retained-versions`; no numeric or lexical version ordering is used. Multiple
+   distinct snapshots under one remaining identity/version yield `ambiguous-target`.
+4. The report contains no unsupported modifier semantics; such reports hold links with
+   `unsafe-report`. Resolution otherwise asserts a structural link only, not safe clinical
+   interpretation or approval of either record's status/value.
+
+Other unresolved reasons include `unsupported-reference`, `missing-target`, `source-mismatch`
+and `patient-mismatch`; Observation assertions retain `resolution-not-implemented` or
+`unsupported-reference`. All original assertions remain at their resource path, including
+identifier-only details. Duplicated result references retain their original paths/order but
+do not manufacture duplicate resources. Repeated references to the identical acquired target
+object are not extra candidates. No recursive traversal, date/text/value matching, network
+fetching or external endpoint resolution occurs. Omitted records/versions cannot be detected:
+the caller must provide the complete retained collection, not an authorized-query assumption.
+
+The renderer adds `ResourcePresentation.kind: 'diagnostic-report'`. Its first slice summarizes
+only final reports with supported selected metadata: supplied title/code display, report
+status, effectiveDateTime and issued as separate labelled source strings. Dates retain source
+precision/offset and are neither parsed, validated, converted nor replaced with each other;
+partial clinical dates remain partial. Missing dates create no invented time. Competing or
+unsupported effective forms, non-string/empty times, malformed selected code, non-final
+statuses and modifier extensions fall back to preserved generic records. Supplied narratives,
+conclusions/conclusionCode, media, imagingStudy or presentedForm also fall back; no XHTML is
+rendered as HTML and no attachment is fetched, opened or decoded. Original JSON remains
+available as selectable plain text. No reference ranges, abnormality, medical conclusions
+or treatment advice are inferred. Existing Patient/Observation rendering and profile hints
+are unchanged; report classification and report metadata presentation are independent.
+
+`samples/synthetic/src/laboratory.ts` separately exports one fictional final report and two
+fictional final laboratory Observations (sodium/potassium), with distinct IDs, version 1 and
+explicit relative result/Patient references. `laboratoryContext` explicitly declares the
+same fictional dashboard source/patient; no new cross-source identity is inferred. The app
+acquires these resources alongside the dashboard fixtures, using that declared context.
+The original three Observations, `resources`, collection Bundle, Home selector and weight
+history are unchanged. The report's two different analyses do not constitute a time series;
+laboratory history remains unavailable, with no numerical capability added to Records.
+
+Records renders only populated report/result/unclassified groups. Compact report cards retain
+status and supplied dates. Existing `/record/[id]` details display each supplied result
+assertion and either an exact source/type/ID/version-qualified local Observation link or
+an explicit unresolved reason. Supported report summaries show linked result cards through
+the unchanged Observation renderer. Generic/non-final reports show identity links only,
+withholding result summaries so they do not imply a finalized clinical conclusion. Result
+Observations remain independently discoverable in Laboratory results. The original report
+JSON is accessible. Qualified lookup failures never fall back to bare IDs; legacy fixed-demo
+links remain restricted to the original demo resources. Back navigation is unchanged.
+The Trends screen, chart, 1M/6M/1Y/All helpers and longitudinal engine are unchanged.
+
+Synthetic tests cover acquisition status/subject/code/JSON guards, duplicate/conflict/version
+and preservation rules; independent report/result classification and unclassified retention;
+same-source/patient resolution, missing/foreign/ambiguous/versioned/unsupported assertions,
+duplicate references, frozen stable descriptors and unchanged Observation assertions;
+renderer fallback and original-source retention; app qualified navigation, separate groups,
+unchanged dashboard/Bundle and ten-point weight ranges. Tests have not been run. Maintainer
+must run focused/full tests, TypeScript, lint, formatting and web/iPhone checks, including
+status/date visibility, original JSON, result links, Back/direct links and accessibility.
+
+Later reviewed slices must define longitudinal laboratory grouping and reference-range/clinical
+interpretation policies, DiagnosticReport.presentedForm/PDF handling, ImagingStudy/DICOM
+metadata and content retrieval/viewing, external reference/contained/versioned resolution,
+and authentication, authorization, verified provenance and protected storage. This milestone
+implements none of those capabilities or dependencies. Outstanding Phase 4A and Phase 3C
+web/iPhone checks remain outstanding until the maintainer records runtime evidence.

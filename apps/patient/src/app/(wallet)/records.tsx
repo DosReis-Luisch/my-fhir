@@ -55,7 +55,7 @@ export default function Records() {
         </View>
       ))}
       {!recordsCatalog.groups.length ? (
-        <Text style={styles.description}>No synthetic clinical observations are available.</Text>
+        <Text style={styles.description}>No synthetic clinical records are available.</Text>
       ) : null}
       {recordsAcquisitionIssues.map((issue) => (
         <Text key={issue} style={styles.description}>

@@ -4,6 +4,7 @@ import type { CodeableConcept, FhirResource, HumanName } from 'fhir/r4';
 export type {
   Bundle,
   CodeableConcept,
+  DiagnosticReport,
   HumanName,
   Observation,
   Organization,

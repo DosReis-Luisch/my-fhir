@@ -1,17 +1,21 @@
 import { createAcquisitionStore } from '@myfhir/fhir-acquisition';
 import { buildClinicalCatalog, type CatalogItem } from '@myfhir/fhir-catalog';
 import type { FhirResource } from '@myfhir/fhir-core';
-import { observations, patient } from '@myfhir/synthetic';
+import {
+  laboratoryContext,
+  laboratoryObservations,
+  laboratoryReport,
+  observations,
+  patient,
+} from '@myfhir/synthetic';
 import { weightTrend } from './weightTrend';
 
-export const recordsContext = Object.freeze({
-  sourceNamespace: 'urn:myfhir:synthetic:dashboard',
-  patientId: patient.id,
-});
+// The laboratory fixture explicitly declares this same demo source; no namespaces are merged.
+export const recordsContext = laboratoryContext;
 
 const store = createAcquisitionStore();
 const issues: string[] = [];
-for (const resource of [patient, ...observations]) {
+for (const resource of [patient, ...observations, laboratoryReport, ...laboratoryObservations]) {
   const result = store.acquire({
     sourceNamespace: recordsContext.sourceNamespace,
     patientContext: recordsContext,
