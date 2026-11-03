@@ -8,8 +8,8 @@ behavior and [development](development.md) for historical validation and manual 
 ## Completed milestones: Phase 0 through Phase 2A
 
 Completion describes delivered scope, not production certification. Historical validation
-results are not rerun results for this milestone. No new checks were executed for this
-documentation change.
+results are not rerun results for this milestone. Phase 3A validation status is recorded
+separately below; no automated checks were executed during its implementation.
 
 | Milestone | Goal / delivered scope                                                                   | Main dependencies                                 | Acceptance / remaining limits                                                                              | Current status                                                                                |
 | --------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -41,7 +41,7 @@ All implementation uses synthetic data until the real-data gate below is satisfi
   provenance, lifecycle requirements and unresolved choices; link architecture and backlog.
 - **Status:** Documented in this milestone; implementation and provider decisions deferred.
 
-### 2. Safe FHIR acquisition and source identity
+### 2. Safe FHIR acquisition and source identity (Phase 3A)
 
 - **Goal:** First implement a pure in-memory boundary for one synthetic Patient/Observation
   pair, without file picking, networking, persistence or authentication.
@@ -51,7 +51,16 @@ All implementation uses synthetic data until the real-data gate below is satisfi
   idempotent; reject/hold malformed or ambiguous patient associations with explicit reasons.
   Add focused synthetic tests and accurately state validation limits. Context checks here
   enforce import consistency, not a substitute for server authorization.
-- **Status:** Planned; recommended next small implementation milestone.
+- **Status:** Implemented in source as `@myfhir/fhir-acquisition`, awaiting maintainer
+  validation/review; **not complete**. The in-memory store exposes `acquire` and `records`,
+  preserves immutable native-resource snapshots with separate metadata, checks exact relative
+  Patient references in an explicit source context, and reports duplicates/rejections/content
+  conflicts without overwriting or selecting a latest version. Basic JSON/shape guards do
+  not establish FHIR conformance or authorization; there is no renderer/UI integration.
+  See [implemented boundary and limits](architecture.md#source-aware-synthetic-acquisition-phase-3a-validation-pending).
+  Focused tests are written but unexecuted. Maintainer must regenerate workspace links/lockfile
+  with root `npm install`, then run the focused/full tests, typecheck, lint and format checks.
+  No install, test, build, formatting or Expo command was run during implementation.
 
 ### 3. Longitudinal FHIR Observation engine
 
