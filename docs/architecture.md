@@ -3,6 +3,11 @@
 See [product direction](product-direction.md) for the patient-first wallet, future
 professional workspaces, distinct identity/access concepts and future integration boundaries.
 
+Future account/patient identity, authorization, acquisition, provenance and lifecycle requirements
+are defined in [integration architecture](integration-architecture.md). See the [product backlog](backlog.md)
+for completed milestones and prioritized small implementation slices. These documents describe
+future requirements and do not change the implemented boundaries below.
+
 ## Direction of dependencies
 
 ```text
