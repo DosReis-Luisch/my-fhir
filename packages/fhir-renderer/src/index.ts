@@ -6,6 +6,7 @@ import {
   type StructureDefinition,
 } from '@myfhir/fhir-core';
 import type { ResourcePresentation } from './descriptor';
+import { diagnosticReportSummary } from './diagnosticReport';
 import { hasUnsupportedObservationResult, observationFields } from './observation';
 import { addProfileMetadata, type ProfileInformedPresentation } from './profilePresentation';
 
@@ -61,6 +62,27 @@ export function presentResource(resource: FhirResource): ResourcePresentation {
     ]);
   }
   switch (resource.resourceType) {
+    case 'DiagnosticReport': {
+      const summary = diagnosticReportSummary(resource);
+      if (!summary) {
+        return fallback(resource, [
+          ...notices,
+          `Report status: ${resource.status}. Only final reports with supported metadata can be summarized.`,
+          'Unsupported report content is preserved in the original; narratives, conclusions and attachments are not interpreted.',
+        ]);
+      }
+      return {
+        kind: 'diagnostic-report',
+        title: summary.title,
+        subtitle: `Diagnostic report · ${resource.status}`,
+        fields: summary.fields,
+        notices: [
+          ...notices,
+          'Times are displayed as supplied, without date validation or conversion. Result references are resolved separately by the local catalog.',
+        ],
+        source: resource,
+      };
+    }
     case 'Patient':
       return {
         kind: 'patient',

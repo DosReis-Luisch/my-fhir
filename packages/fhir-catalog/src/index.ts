@@ -4,7 +4,8 @@ import type { QuantitySeries } from '@myfhir/fhir-longitudinal';
 
 export const observationCategorySystem =
   'http://terminology.hl7.org/CodeSystem/observation-category';
-export type ClinicalCategory = 'vital-signs' | 'laboratory' | 'unclassified';
+export const diagnosticReportCategorySystem = 'http://terminology.hl7.org/CodeSystem/v2-0074';
+export type ClinicalCategory = 'vital-signs' | 'laboratory-report' | 'laboratory' | 'unclassified';
 export type ClassificationReason =
   | 'explicit-category'
   | 'patient-context-resource'
@@ -19,14 +20,27 @@ export type ClassificationEvidence = Readonly<{
   code: string | undefined;
   version: string | undefined;
 }>;
-/** Supplied reference assertion only: no target, traversal, ownership or resolution inferred. */
-export type CatalogRelationship = Readonly<{
-  path: string;
-  reference: string | undefined;
-  sourceContext: PatientContext;
-  resolution: 'unresolved';
-  reason: 'resolution-not-implemented' | 'unsupported-reference';
-}>;
+export type RelationshipIssue =
+  | 'resolution-not-implemented'
+  | 'unsupported-reference'
+  | 'missing-target'
+  | 'source-mismatch'
+  | 'patient-mismatch'
+  | 'multiple-retained-versions'
+  | 'ambiguous-target'
+  | 'unsafe-report';
+/** Only report-result relationships may resolve; target is the exact acquired snapshot. */
+export type CatalogRelationship = Readonly<
+  {
+    kind: 'assertion' | 'report-result';
+    path: string;
+    reference: string | undefined;
+    sourceContext: PatientContext;
+  } & (
+    | { resolution: 'unresolved'; reason: RelationshipIssue }
+    | { resolution: 'resolved'; target: AcquiredResource }
+  )
+>;
 export type CatalogItem = Readonly<{
   key: string;
   record: AcquiredResource;
@@ -66,12 +80,13 @@ export type ClinicalCatalog = Readonly<{
 const limitations = Object.freeze([
   'Selected category metadata only; no FHIR, profile, terminology or clinical validation.',
   'Context filtering is consistency, not authorization or cross-source patient matching.',
-  'No latest-version selection, relationship resolution, external fetching or persistence.',
+  'Only explicit local report-result resolution; no latest-version selection, fetching or persistence.',
   'Category does not imply safe interpretation or numerical eligibility; renderer/analysis policies apply.',
 ]);
-const categories = ['vital-signs', 'laboratory', 'unclassified'] as const;
+const categories = ['vital-signs', 'laboratory-report', 'laboratory', 'unclassified'] as const;
 const labels = {
   'vital-signs': 'Vital signs and body measurements',
+  'laboratory-report': 'Laboratory reports',
   laboratory: 'Laboratory results',
   unclassified: 'Other / unclassified clinical records',
 };
@@ -94,6 +109,7 @@ function classify(record: AcquiredResource) {
   const evidence: ClassificationEvidence[] = [];
   const raw: unknown = ownField(record.resource, 'category');
   let unsupported = false;
+  const report = record.resource.resourceType === 'DiagnosticReport';
   if (Array.isArray(raw)) {
     raw.forEach((concept, i) => {
       const coding = ownField(concept, 'coding');
@@ -107,8 +123,8 @@ function classify(record: AcquiredResource) {
             Object.freeze({ path: `category[${i}].coding[${j}]`, system, code, version }),
           );
           if (
-            system !== observationCategorySystem ||
-            (code !== 'vital-signs' && code !== 'laboratory') ||
+            system !== (report ? diagnosticReportCategorySystem : observationCategorySystem) ||
+            (report ? code !== 'LAB' : code !== 'vital-signs' && code !== 'laboratory') ||
             ownField(entry, 'version') !== undefined
           ) {
             unsupported = true;
@@ -128,11 +144,15 @@ function classify(record: AcquiredResource) {
   else if (!evidence.length) reason = 'missing-category';
   else {
     reason = 'explicit-category';
-    category = evidence[0]!.code as 'vital-signs' | 'laboratory';
+    category = report ? 'laboratory-report' : (evidence[0]!.code as 'vital-signs' | 'laboratory');
   }
   return { category, reason, evidence: Object.freeze(evidence) };
 }
-function relationships(record: AcquiredResource): readonly CatalogRelationship[] {
+function relationships(
+  record: AcquiredResource,
+  records: readonly AcquiredResource[],
+): readonly CatalogRelationship[] {
+  if (record.resource.resourceType === 'DiagnosticReport') return reportResults(record, records);
   if (record.resource.resourceType !== 'Observation') return Object.freeze([]);
   const result: CatalogRelationship[] = [];
   for (const field of [
@@ -154,6 +174,7 @@ function relationships(record: AcquiredResource): readonly CatalogRelationship[]
       const reference = text(ownField(entry, 'reference'));
       result.push(
         Object.freeze({
+          kind: 'assertion',
           path: Array.isArray(value) ? `${field}[${index}]` : field,
           reference,
           sourceContext: record.metadata.patientContext,
@@ -164,6 +185,58 @@ function relationships(record: AcquiredResource): readonly CatalogRelationship[]
     });
   }
   return Object.freeze(result);
+}
+
+/** Resolve direct relative report results only; inspect ALL retained records before context filtering. */
+function reportResults(
+  report: AcquiredResource,
+  records: readonly AcquiredResource[],
+): readonly CatalogRelationship[] {
+  const raw = ownField(report.resource, 'result');
+  if (raw === undefined) return Object.freeze([]);
+  const entries = Array.isArray(raw) ? raw : [raw];
+  const retained = [...new Set(records)];
+  const unsafe = hasModifier(report.resource);
+  return Object.freeze(entries.map((entry, index): CatalogRelationship => {
+    const reference = text(ownField(entry, 'reference'));
+    const assertion = {
+      kind: 'report-result' as const,
+      path: Array.isArray(raw) ? `result[${index}]` : 'result',
+      reference,
+      sourceContext: report.metadata.patientContext,
+    };
+    const unresolved = (reason: RelationshipIssue): CatalogRelationship =>
+      Object.freeze({ ...assertion, resolution: 'unresolved', reason });
+    const match = reference && /^Observation\/([A-Za-z0-9.-]{1,64})$/.exec(reference);
+    if (
+      !Array.isArray(raw) || !match || match[0] !== reference ||
+      ownField(entry, 'identifier') !== undefined ||
+      (ownField(entry, 'type') !== undefined && ownField(entry, 'type') !== 'Observation')
+    ) {
+      return unresolved('unsupported-reference');
+    }
+    if (unsafe) return unresolved('unsafe-report');
+    const candidates = retained.filter((target) =>
+      target.metadata.identity.resourceType === 'Observation' &&
+      target.metadata.identity.logicalId === match[1],
+    );
+    const sameSource = candidates.filter((target) =>
+      target.metadata.identity.sourceNamespace === report.metadata.identity.sourceNamespace,
+    );
+    if (!sameSource.length) {
+      return unresolved(candidates.length ? 'source-mismatch' : 'missing-target');
+    }
+    // Versions in another patient context must not make an identity appear authoritative.
+    if (new Set(sameSource.map((target) => target.metadata.versionId)).size > 1) {
+      return unresolved('multiple-retained-versions');
+    }
+    const samePatient = sameSource.filter((target) =>
+      sameContext(target.metadata.patientContext, report.metadata.patientContext),
+    );
+    if (!samePatient.length) return unresolved('patient-mismatch');
+    if (sameSource.length !== 1 || samePatient.length !== 1) return unresolved('ambiguous-target');
+    return Object.freeze({ ...assertion, resolution: 'resolved', target: samePatient[0]! });
+  }));
 }
 
 /** Accept only acquisition snapshots. Series evidence must come from the longitudinal engine. */
@@ -218,7 +291,7 @@ export function buildClinicalCatalog(
         ...classify(record),
         limitations,
         capabilities: Object.freeze(capabilities),
-        relationships: relationships(record),
+        relationships: relationships(record, records),
       }),
     );
   }
@@ -229,7 +302,7 @@ export function buildClinicalCatalog(
         category,
         label: labels[category],
         items: Object.freeze(
-          items.filter((item) => item.category === category && item.resourceType === 'Observation'),
+          items.filter((item) => item.category === category && item.resourceType !== 'Patient'),
         ),
       }),
     )

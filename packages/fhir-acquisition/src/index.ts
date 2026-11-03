@@ -1,9 +1,9 @@
-import { ownField, type Observation, type Patient } from '@myfhir/fhir-core';
+import { ownField, type DiagnosticReport, type Observation, type Patient } from '@myfhir/fhir-core';
 import { contentKey, snapshotJson } from './json';
 
 export type SourceQualifiedIdentity = Readonly<{
   sourceNamespace: string;
-  resourceType: 'Patient' | 'Observation';
+  resourceType: 'Patient' | 'Observation' | 'DiagnosticReport';
   logicalId: string;
 }>;
 
@@ -15,7 +15,7 @@ export type DeepReadonly<T> = T extends object
   : T;
 
 export type AcquiredResource = Readonly<{
-  resource: DeepReadonly<Patient | Observation>;
+  resource: DeepReadonly<Patient | Observation | DiagnosticReport>;
   metadata: InspectionLimits &
     Readonly<{
       identity: SourceQualifiedIdentity;
@@ -39,6 +39,7 @@ export type AcquisitionIssue =
   | 'invalid-resource-id'
   | 'invalid-version'
   | 'invalid-observation-shape'
+  | 'invalid-diagnostic-report-shape'
   | 'missing-patient-reference'
   | 'ambiguous-patient-reference'
   | 'unsupported-patient-reference'
@@ -81,6 +82,18 @@ const observationStatuses = new Set([
   'entered-in-error',
   'unknown',
 ]);
+const diagnosticReportStatuses = new Set([
+  'registered',
+  'partial',
+  'preliminary',
+  'final',
+  'amended',
+  'corrected',
+  'appended',
+  'cancelled',
+  'entered-in-error',
+  'unknown',
+]);
 
 function isId(value: unknown): value is string {
   return typeof value === 'string' && value.trim() === value && /^[A-Za-z0-9.-]{1,64}$/.test(value);
@@ -92,6 +105,25 @@ function isNamespace(value: unknown): value is string {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** Selected CodeableConcept shape only; no terminology or FHIR conformance validation. */
+function isReportCode(value: unknown): boolean {
+  if (!isObject(value)) return false;
+  const { text, coding } = value;
+  if (text !== undefined && (typeof text !== 'string' || !text.trim())) return false;
+  if (
+    coding !== undefined &&
+    (!Array.isArray(coding) || !coding.length || !coding.every((entry) =>
+      isObject(entry) &&
+      typeof entry.code === 'string' && entry.code.trim().length > 0 &&
+      (entry.system === undefined ||
+        (typeof entry.system === 'string' && entry.system.trim().length > 0)),
+    ))
+  ) {
+    return false;
+  }
+  return text !== undefined || coding !== undefined;
 }
 
 function associationIssue(
@@ -142,7 +174,10 @@ export function createAcquisitionStore(): AcquisitionStore {
       }
       if (!isObject(snapshot)) return reject('unsupported-resource-type');
       const { resourceType, id, meta } = snapshot;
-      if (resourceType !== 'Patient' && resourceType !== 'Observation') {
+      if (
+        resourceType !== 'Patient' && resourceType !== 'Observation' &&
+        resourceType !== 'DiagnosticReport'
+      ) {
         return reject('unsupported-resource-type');
       }
       if (!isId(id)) return reject('invalid-resource-id');
@@ -156,6 +191,14 @@ export function createAcquisitionStore(): AcquisitionStore {
           !isObject(snapshot.code))
       ) {
         return reject('invalid-observation-shape');
+      }
+      if (
+        resourceType === 'DiagnosticReport' &&
+        (typeof snapshot.status !== 'string' ||
+          !diagnosticReportStatuses.has(snapshot.status) ||
+          !isReportCode(snapshot.code))
+      ) {
+        return reject('invalid-diagnostic-report-shape');
       }
       const issue = associationIssue(snapshot, patientId);
       if (issue) return reject(issue);
@@ -177,7 +220,7 @@ export function createAcquisitionStore(): AcquisitionStore {
       }
       const record: AcquiredResource = Object.freeze({
         // Basic structural inspection is deliberately not full FHIR validation.
-        resource: snapshot as unknown as DeepReadonly<Patient | Observation>,
+        resource: snapshot as unknown as DeepReadonly<Patient | Observation | DiagnosticReport>,
         metadata: Object.freeze({
           ...limits,
           identity,

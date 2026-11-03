@@ -113,22 +113,53 @@ All implementation uses synthetic data until the real-data gate below is satisfi
 - **Goal:** Share disposable source/patient-scoped organization between Records and Trends.
 - **Dependencies:** Existing acquisition, conservative renderer and longitudinal engines;
   Phase 3C merged before implementation.
-- **Status:** Implemented in source as `@myfhir/fhir-catalog`, **awaiting maintainer
-  validation; not complete**. Exact supported Observation category coding groups vital
+- **Status:** Phase 4A merged through **PR #11**, commit `af1a7c2`, as
+  `@myfhir/fhir-catalog`. Web/iPhone runtime checks remain outstanding; merge does not
+  establish device verification. Exact supported Observation category coding groups vital
   signs, laboratory and other/unclassified records, with evidence and explicit limits.
   Patient descriptors retain context; clinical groups contain Observations only. Source,
   type, ID and available version remain distinct; no latest version is chosen.
   Records uses nonempty catalog groups/counts and qualified detail links. Trends uses
   catalog history labels/capabilities while preserving the engine series, chart and fixtures.
   Supplied references remain unresolved; no traversal or fetching is implemented.
-- **Acceptance / remaining work:** Register the workspace and regenerate/review the lockfile
-  locally; run focused/full tests, TypeScript, lint and formatting checks, Expo compatibility
-  and web/iPhone navigation/accessibility checks. No installs, tests, builds, formatters or
-  Expo commands were run during Phase 4A implementation. Security reassessment gates above
+- **Acceptance / remaining work:** Complete web/iPhone grouped Records, qualified detail
+  navigation, Trends and accessibility verification. No Phase 4A validation results are
+  newly claimed here. No installs, tests, builds, formatters or Expo commands were run
+  during Phase 4A implementation. Security reassessment gates above
   remain in force. See [catalog boundary](architecture.md#clinical-catalog-and-organization-phase-4a).
-- **Deferred:** General search/filter UI, report/imaging/document acquisition, DICOM retrieval
-  and viewing, reference resolution, non-numerical timelines, clinical validation and
-  laboratory interpretation. These need separate reviewed slices, not category aliases.
+- **Deferred:** General search/filter UI, imaging/document acquisition, DICOM retrieval
+  and viewing, general reference resolution, non-numerical timelines, clinical validation
+  and laboratory interpretation. The narrow report/result slice is tracked below.
+
+### 4B. Laboratory results and DiagnosticReports
+
+- **Goal:** One fully fictional laboratory report and two independently discoverable results,
+  with exact local source/patient-scoped links and original FHIR inspection.
+- **Dependencies:** Merged Phase 4A; native R4 DiagnosticReport export, acquisition guards,
+  catalog classification/resolution and conservative renderer metadata presentation.
+- **Status:** Implemented in source on `feat/laboratory-reports`, **awaiting maintainer
+  validation and GitHub code review; not complete**. Acquisition now supports only Patient,
+  Observation and DiagnosticReport. A report uses exact unversioned `v2-0074|LAB` category
+  coding, independently of Observation laboratory coding. Reports, results and unclassified
+  records have separate populated groups. No report category is inherited by its results.
+- **Relationships:** Only direct `DiagnosticReport.result` references of the exact form
+  `Observation/<logical-id>` can resolve to already supplied acquired records. Source,
+  patient and all retained target versions are checked without choosing a latest version.
+  Missing, foreign, ambiguous, multiple-version, unsafe and unsupported assertions remain
+  explicit; no traversal or fetching occurs. Duplicate assertions do not create records.
+- **Presentation:** Final reports with supported metadata show title/status and separate
+  supplied clinical/issued times. Other statuses, modifier extensions and unsupported
+  narratives/conclusions/attachments/time forms fall back. Result links are supplied-reference
+  navigation, not approval of the report or clinical interpretation of its results.
+- **Validation / remaining work:** Run focused acquisition/catalog/renderer tests, existing
+  weight-series tests, full suite, TypeScript, lint, formatting and manual web/iPhone checks.
+  No installs, tests, builds, Expo or formatters were run for this source-only implementation.
+  No manifests, dependency versions, lockfile or security assessment were changed.
+  See [Phase 4B boundary](architecture.md#laboratory-results-and-diagnosticreports-phase-4b).
+- **Deferred:** Longitudinal laboratory histories; reference ranges/normality and safe clinical
+  interpretation; presentedForm/PDF; ImagingStudy/DICOM; external reference resolution;
+  authentication, authorization, verified provenance and protected storage. Existing SDK 57
+  security findings remain unresolved and release gates remain in force.
 
 ### 5. Local FHIR R4 file and Bundle import
 

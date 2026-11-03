@@ -255,7 +255,7 @@ describe('portable clinical catalog', () => {
       store.acquire({
         sourceNamespace: context.sourceNamespace,
         patientContext: context,
-        resource: { resourceType: 'DiagnosticReport', id: 'fictional' },
+        resource: { resourceType: 'ImagingStudy', id: 'fictional' },
       }),
     ).toMatchObject({ status: 'rejected', reason: 'unsupported-resource-type' });
     expect(() => buildClinicalCatalog([], { ...context, sourceNamespace: '' })).toThrow(RangeError);
