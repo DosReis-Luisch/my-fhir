@@ -1,5 +1,11 @@
 # Product direction
 
+See [integration architecture](integration-architecture.md) for the detailed future identity,
+authorization, acquisition and lifecycle boundaries, and the [product backlog](backlog.md) for
+priority, dependencies and acceptance criteria. The backlog records Phase 2A as merged, with
+final device navigation verification remaining a follow-up check. Future capabilities below
+remain design direction, not implemented integrations.
+
 ## Patient-first, not patient-only
 
 MyFHIR starts as a FHIR-native personal health wallet: patients should be able to understand
