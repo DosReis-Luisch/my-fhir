@@ -196,7 +196,8 @@ No sample IDs, resource shapes or Bundle membership changed in Phase 2A.
 The synthetic workspace owns one fictional Patient, three Observations (including a
 blood-pressure component example), and one Organization, also exported as a native
 collection Bundle. Overview observations are selected by the exact local Patient
-reference. There is no general reference resolver or remote input boundary yet.
+reference. There is no general reference resolver or remote input boundary yet. The independent
+Phase 3A synthetic acquisition package below is not wired into the wallet.
 Detail routes use locally unique fixture IDs; before introducing remote/multi-type
 records they must use resource type plus ID and server context to avoid collisions.
 
@@ -207,6 +208,80 @@ FHIR resource IDs alone are not globally unique. Profile declarations are inform
 and remain explicitly unresolved in the original renderer. Callers can separately match
 known local definitions through fhir-core or opt into the Phase 1B composition. This is
 not universal FHIR/profile support.
+
+### Source-aware synthetic acquisition (Phase 3A, validation pending)
+
+`packages/fhir-acquisition` is a private portable workspace, depending only on
+`@myfhir/fhir-core`. It separates acquisition state from clinical helpers and rendering for
+future reuse across platforms and adapters. It has no application, sample, renderer,
+React/Expo, network, storage, authentication or hardware dependencies. No connector, UI
+or existing rendering/profile inspection behavior is changed.
+
+The public entry point `createAcquisitionStore()` returns an in-memory object with:
+
+- `acquire({ sourceNamespace, patientContext, resource })`: inspect a synthetic native R4
+  object and return `acquired`, `duplicate`, `rejected` with a reason, or `conflict` with the
+  existing record. Every result and acquired record's metadata report `validation: 'basic-guards-only'`,
+  `fhirValidation: 'not-performed'` and `authorization: 'not-checked'`.
+- `records()`: a frozen insertion-order snapshot of all acquired records in this store,
+  potentially spanning contexts. It is not an authorized patient query or a latest-version
+  view. Callers must isolate/select context before any future display or analysis.
+
+Exported types include `AcquisitionRequest`, `AcquisitionResult`, `AcquisitionIssue`,
+`AcquisitionStore`, `SourceQualifiedIdentity`, `PatientContext`, `AcquiredResource` and
+`DeepReadonly`. A record retains the native Patient/Observation shape as an immutable,
+detached snapshot; identity/version/patient context are separate metadata. Caller-owned
+objects are neither changed nor frozen. Snapshots preserve unknown fields, extensions,
+clinical values, identifiers and date strings; byte-level serialization is not retained.
+
+Identity is the exact case-sensitive source namespace, resource type and logical ID tuple.
+Namespace is caller-supplied and opaque, with no URL normalization; adapters must allocate
+stable namespaces including tenant/customer partition where needed. Logical IDs and supplied
+`meta.versionId` must match `[A-Za-z0-9.-]{1,64}`. Version is stored separately from identity;
+an absent version is its own comparison bucket, not an invented version or latest record.
+The internal tuple encoding avoids delimiter collisions.
+
+Each acquire call requires exactly one context `{ sourceNamespace, patientId }`, with the
+same namespace as the acquired resource. A Patient must have that ID. An Observation must
+have an exact relative unversioned `subject.reference` of `Patient/<id>` within that source.
+The Patient resource need not already be in the store: this is explicit-context consistency,
+not inferred batch membership. Missing references, identifier-only or multiple/malformed
+subjects, and reference-plus-identifier assertions are rejected with explicit reasons.
+Absolute, contained, URN, bare-ID and history references are unsupported; a supplied
+`subject.type` must be exactly `Patient`. Nothing resolves cross-source identity or proves
+authorization. Rejected input is not stored or sent to interpretation.
+
+Repeat acquisition compares all supplied JSON content, ignoring object property order but
+preserving array order and value differences. Equal source/type/ID/version and content return
+the existing record as `duplicate`. Different content in that bucket returns a conflict and
+does not overwrite; different versions remain separate, with no version ordering or merging.
+Independent resource IDs/events are never collapsed merely because measurements match.
+Unknown-field changes also conflict. Content comparison is not a cryptographic hash.
+
+Runtime guards require plain JSON data, supported resource type/ID/version and, for
+Observation, a recognized R4 status and object-shaped code. They reject cycles, accessors,
+symbols, non-enumerable/custom properties, undefined, non-finite numbers, sparse arrays and
+non-plain objects rather than silently discarding/changing values. Inspection is bounded to
+depth 64 and 10,000 visited values, with oversized property collections rejected early.
+These are basic guards, not full FHIR R4, StructureDefinition, terminology or clinical
+validation. Optional clinical structures, value-choice invariants and modifier semantics
+are not validated or interpreted. Such fields remain intact; acquisition success is not
+eligibility for specialized clinical interpretation. This package invokes no renderer and
+cannot bypass its existing fallbacks; a future bridge must enforce its own supported-input
+policy and accurately report validation limits.
+
+No Bundle/file import, general reference resolution, timestamps/provenance verification,
+persistence, grants or source authenticity checks are implemented. Input is limited to
+caller-provided synthetic plain-data objects, not arbitrary executable objects/proxies or
+an adversarial file parser. In-memory state is discarded with the store; conflicts retain
+only the prior record, and callers retain rejected/conflicting input for any later review.
+The package does not choose retention or synchronization policies.
+
+Focused Vitest cases were added under `packages/fhir-acquisition/tests`; they have **not
+been run**. Phase 3A remains implementation awaiting maintainer validation and review.
+The existing workspace/test globs discover the package without config changes. The new
+workspace requires the maintainer to run `npm install` from the root to update workspace
+links and `package-lock.json`; neither installation nor lockfile regeneration was run here.
 
 No authentication, network access, database, server, persistence, cloud services, FHIRPath,
 terminology lookup, full profile resolution, or clinical decision support is implemented.
