@@ -12,11 +12,12 @@ export function ResourceCard({
   compact?: boolean;
   recordParams?: { id: string; source: string; type: string; version?: string };
 }) {
-  const fields = compact && presentation.kind !== 'diagnostic-report'
-    ? presentation.fields.filter(
-        (field) => field.sourcePath !== 'effectiveDateTime' && field.sourcePath !== 'status',
-      )
-    : presentation.fields;
+  const fields =
+    compact && presentation.kind !== 'diagnostic-report'
+      ? presentation.fields.filter(
+          (field) => field.sourcePath !== 'effectiveDateTime' && field.sourcePath !== 'status',
+        )
+      : presentation.fields;
   return (
     <View style={styles.card}>
       <Text style={styles.eyebrow}>{presentation.subtitle}</Text>

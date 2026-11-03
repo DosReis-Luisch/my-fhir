@@ -4,11 +4,15 @@ import { presentResource, presentResourceWithProfiles } from '../src/index';
 
 function report(fields: Partial<DiagnosticReport> = {}): DiagnosticReport {
   return {
-    resourceType: 'DiagnosticReport', id: 'fictional-report', status: 'final',
+    resourceType: 'DiagnosticReport',
+    id: 'fictional-report',
+    status: 'final',
     code: { text: 'Fictional laboratory report' },
     subject: { reference: 'Patient/fictional-patient' },
-    effectiveDateTime: '2026-10-15T09:00:00+01:00', issued: '2026-10-15T12:15:00+01:00',
-    result: [{ reference: 'Observation/fictional-result' }], ...fields,
+    effectiveDateTime: '2026-10-15T09:00:00+01:00',
+    issued: '2026-10-15T12:15:00+01:00',
+    result: [{ reference: 'Observation/fictional-result' }],
+    ...fields,
   };
 }
 
@@ -21,7 +25,11 @@ describe('conservative DiagnosticReport presentation', () => {
     expect(presentation.title).toBe(original.code.text);
     expect(presentation.fields).toEqual([
       { label: 'Report status', value: 'final', sourcePath: 'status' },
-      { label: 'Clinically effective time (as supplied)', value: original.effectiveDateTime, sourcePath: 'effectiveDateTime' },
+      {
+        label: 'Clinically effective time (as supplied)',
+        value: original.effectiveDateTime,
+        sourcePath: 'effectiveDateTime',
+      },
       { label: 'Issued time (as supplied)', value: original.issued, sourcePath: 'issued' },
     ]);
     expect(presentation.source).toBe(original);
@@ -32,17 +40,30 @@ describe('conservative DiagnosticReport presentation', () => {
 
   it('preserves supplied partial date precision and never substitutes issued time', () => {
     const partial = presentResource(report({ effectiveDateTime: '2026-10' }));
-    expect(partial.fields.find((field) => field.sourcePath === 'effectiveDateTime')?.value).toBe('2026-10');
+    expect(partial.fields.find((field) => field.sourcePath === 'effectiveDateTime')?.value).toBe(
+      '2026-10',
+    );
     const withoutClinicalTime = report();
     delete withoutClinicalTime.effectiveDateTime;
     const presentation = presentResource(withoutClinicalTime);
-    expect(presentation.fields.some((field) => field.sourcePath === 'effectiveDateTime')).toBe(false);
-    expect(presentation.fields.find((field) => field.sourcePath === 'issued')?.value).toBe(withoutClinicalTime.issued);
+    expect(presentation.fields.some((field) => field.sourcePath === 'effectiveDateTime')).toBe(
+      false,
+    );
+    expect(presentation.fields.find((field) => field.sourcePath === 'issued')?.value).toBe(
+      withoutClinicalTime.issued,
+    );
   });
 
   it.each([
-    'registered', 'partial', 'preliminary', 'amended', 'corrected', 'appended',
-    'cancelled', 'entered-in-error', 'unknown',
+    'registered',
+    'partial',
+    'preliminary',
+    'amended',
+    'corrected',
+    'appended',
+    'cancelled',
+    'entered-in-error',
+    'unknown',
   ] as const)('falls back rather than presenting status %s as a final report', (status) => {
     const resource = report({ status });
     const presentation = presentResource(resource);
@@ -55,7 +76,12 @@ describe('conservative DiagnosticReport presentation', () => {
   it.each([
     { conclusion: 'Fictional conclusion, not interpreted' },
     { conclusionCode: [{ text: 'Fictional conclusion code' }] },
-    { text: { status: 'generated', div: '<div xmlns="http://www.w3.org/1999/xhtml">Fictional narrative</div>' } },
+    {
+      text: {
+        status: 'generated',
+        div: '<div xmlns="http://www.w3.org/1999/xhtml">Fictional narrative</div>',
+      },
+    },
     { presentedForm: [{ contentType: 'application/pdf', url: 'urn:fictional:pdf' }] },
     { media: [{ link: { reference: 'Media/fictional-image' } }] },
     { imagingStudy: [{ reference: 'ImagingStudy/fictional' }] },
@@ -74,8 +100,12 @@ describe('conservative DiagnosticReport presentation', () => {
 
   it('falls back safely for malformed selected metadata', () => {
     for (const fields of [
-      { code: { coding: 'malformed' } }, { code: {} }, { issued: 42 },
-      { effectiveDateTime: { invalid: true } }, { result: 'malformed' }, { result: [null] },
+      { code: { coding: 'malformed' } },
+      { code: {} },
+      { issued: 42 },
+      { effectiveDateTime: { invalid: true } },
+      { result: 'malformed' },
+      { result: [null] },
     ]) {
       const resource = { ...report(), ...fields } as unknown as DiagnosticReport;
       expect(presentResource(resource).kind).toBe('generic');

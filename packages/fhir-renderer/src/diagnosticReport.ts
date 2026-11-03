@@ -25,9 +25,8 @@ export function diagnosticReportSummary(resource: DiagnosticReport) {
   const result = ownField(resource, 'result');
   if (
     result !== undefined &&
-    (!Array.isArray(result) || result.some((entry) =>
-      typeof entry !== 'object' || entry === null || Array.isArray(entry),
-    ))
+    (!Array.isArray(result) ||
+      result.some((entry) => typeof entry !== 'object' || entry === null || Array.isArray(entry)))
   ) {
     return undefined;
   }
@@ -35,10 +34,15 @@ export function diagnosticReportSummary(resource: DiagnosticReport) {
   const coding = ownField(resource.code, 'coding');
   if (
     (codeText !== undefined && (typeof codeText !== 'string' || !codeText.trim())) ||
-    (coding !== undefined && (!Array.isArray(coding) || !coding.length || coding.some((entry) =>
-      typeof ownField(entry, 'code') !== 'string' ||
-      (ownField(entry, 'display') !== undefined && typeof ownField(entry, 'display') !== 'string'),
-    )))
+    (coding !== undefined &&
+      (!Array.isArray(coding) ||
+        !coding.length ||
+        coding.some(
+          (entry) =>
+            typeof ownField(entry, 'code') !== 'string' ||
+            (ownField(entry, 'display') !== undefined &&
+              typeof ownField(entry, 'display') !== 'string'),
+        )))
   ) {
     return undefined;
   }

@@ -59,7 +59,8 @@ export default function RecordDetails() {
                 return (
                   <View key={relationship.path} style={styles.source}>
                     <Text selectable style={styles.caption}>
-                      {relationship.path}: {relationship.reference ?? 'Unsupported reference assertion'}
+                      {relationship.path}:{' '}
+                      {relationship.reference ?? 'Unsupported reference assertion'}
                     </Text>
                     {target && presentation?.kind === 'diagnostic-report' ? (
                       <ResourceCard

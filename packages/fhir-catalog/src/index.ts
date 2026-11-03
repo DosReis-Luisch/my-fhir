@@ -197,46 +197,53 @@ function reportResults(
   const entries = Array.isArray(raw) ? raw : [raw];
   const retained = [...new Set(records)];
   const unsafe = hasModifier(report.resource);
-  return Object.freeze(entries.map((entry, index): CatalogRelationship => {
-    const reference = text(ownField(entry, 'reference'));
-    const assertion = {
-      kind: 'report-result' as const,
-      path: Array.isArray(raw) ? `result[${index}]` : 'result',
-      reference,
-      sourceContext: report.metadata.patientContext,
-    };
-    const unresolved = (reason: RelationshipIssue): CatalogRelationship =>
-      Object.freeze({ ...assertion, resolution: 'unresolved', reason });
-    const match = reference && /^Observation\/([A-Za-z0-9.-]{1,64})$/.exec(reference);
-    if (
-      !Array.isArray(raw) || !match || match[0] !== reference ||
-      ownField(entry, 'identifier') !== undefined ||
-      (ownField(entry, 'type') !== undefined && ownField(entry, 'type') !== 'Observation')
-    ) {
-      return unresolved('unsupported-reference');
-    }
-    if (unsafe) return unresolved('unsafe-report');
-    const candidates = retained.filter((target) =>
-      target.metadata.identity.resourceType === 'Observation' &&
-      target.metadata.identity.logicalId === match[1],
-    );
-    const sameSource = candidates.filter((target) =>
-      target.metadata.identity.sourceNamespace === report.metadata.identity.sourceNamespace,
-    );
-    if (!sameSource.length) {
-      return unresolved(candidates.length ? 'source-mismatch' : 'missing-target');
-    }
-    // Versions in another patient context must not make an identity appear authoritative.
-    if (new Set(sameSource.map((target) => target.metadata.versionId)).size > 1) {
-      return unresolved('multiple-retained-versions');
-    }
-    const samePatient = sameSource.filter((target) =>
-      sameContext(target.metadata.patientContext, report.metadata.patientContext),
-    );
-    if (!samePatient.length) return unresolved('patient-mismatch');
-    if (sameSource.length !== 1 || samePatient.length !== 1) return unresolved('ambiguous-target');
-    return Object.freeze({ ...assertion, resolution: 'resolved', target: samePatient[0]! });
-  }));
+  return Object.freeze(
+    entries.map((entry, index): CatalogRelationship => {
+      const reference = text(ownField(entry, 'reference'));
+      const assertion = {
+        kind: 'report-result' as const,
+        path: Array.isArray(raw) ? `result[${index}]` : 'result',
+        reference,
+        sourceContext: report.metadata.patientContext,
+      };
+      const unresolved = (reason: RelationshipIssue): CatalogRelationship =>
+        Object.freeze({ ...assertion, resolution: 'unresolved', reason });
+      const match = reference && /^Observation\/([A-Za-z0-9.-]{1,64})$/.exec(reference);
+      if (
+        !Array.isArray(raw) ||
+        !match ||
+        match[0] !== reference ||
+        ownField(entry, 'identifier') !== undefined ||
+        (ownField(entry, 'type') !== undefined && ownField(entry, 'type') !== 'Observation')
+      ) {
+        return unresolved('unsupported-reference');
+      }
+      if (unsafe) return unresolved('unsafe-report');
+      const candidates = retained.filter(
+        (target) =>
+          target.metadata.identity.resourceType === 'Observation' &&
+          target.metadata.identity.logicalId === match[1],
+      );
+      const sameSource = candidates.filter(
+        (target) =>
+          target.metadata.identity.sourceNamespace === report.metadata.identity.sourceNamespace,
+      );
+      if (!sameSource.length) {
+        return unresolved(candidates.length ? 'source-mismatch' : 'missing-target');
+      }
+      // Versions in another patient context must not make an identity appear authoritative.
+      if (new Set(sameSource.map((target) => target.metadata.versionId)).size > 1) {
+        return unresolved('multiple-retained-versions');
+      }
+      const samePatient = sameSource.filter((target) =>
+        sameContext(target.metadata.patientContext, report.metadata.patientContext),
+      );
+      if (!samePatient.length) return unresolved('patient-mismatch');
+      if (sameSource.length !== 1 || samePatient.length !== 1)
+        return unresolved('ambiguous-target');
+      return Object.freeze({ ...assertion, resolution: 'resolved', target: samePatient[0]! });
+    }),
+  );
 }
 
 /** Accept only acquisition snapshots. Series evidence must come from the longitudinal engine. */

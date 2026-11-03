@@ -15,18 +15,27 @@ export const laboratoryObservations: readonly Observation[] = [
     status: 'final',
     category: [
       {
-        coding: [{
-          system: 'http://terminology.hl7.org/CodeSystem/observation-category',
-          code: 'laboratory',
-        }],
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+            code: 'laboratory',
+          },
+        ],
       },
     ],
     code: {
-      coding: [{ system: 'http://loinc.org', code: '2951-2', display: 'Sodium in serum or plasma' }],
+      coding: [
+        { system: 'http://loinc.org', code: '2951-2', display: 'Sodium in serum or plasma' },
+      ],
     },
     subject: { reference: 'Patient/demo-alex-morgan' },
     effectiveDateTime: '2026-10-15T09:00:00+01:00',
-    valueQuantity: { value: 140, unit: 'mmol/L', system: 'http://unitsofmeasure.org', code: 'mmol/L' },
+    valueQuantity: {
+      value: 140,
+      unit: 'mmol/L',
+      system: 'http://unitsofmeasure.org',
+      code: 'mmol/L',
+    },
   },
   {
     resourceType: 'Observation',
@@ -35,20 +44,31 @@ export const laboratoryObservations: readonly Observation[] = [
     status: 'final',
     category: [
       {
-        coding: [{
-          system: 'http://terminology.hl7.org/CodeSystem/observation-category',
-          code: 'laboratory',
-        }],
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+            code: 'laboratory',
+          },
+        ],
       },
     ],
     code: {
-      coding: [{
-        system: 'http://loinc.org', code: '2823-3', display: 'Potassium in serum or plasma',
-      }],
+      coding: [
+        {
+          system: 'http://loinc.org',
+          code: '2823-3',
+          display: 'Potassium in serum or plasma',
+        },
+      ],
     },
     subject: { reference: 'Patient/demo-alex-morgan' },
     effectiveDateTime: '2026-10-15T09:00:00+01:00',
-    valueQuantity: { value: 4.2, unit: 'mmol/L', system: 'http://unitsofmeasure.org', code: 'mmol/L' },
+    valueQuantity: {
+      value: 4.2,
+      unit: 'mmol/L',
+      system: 'http://unitsofmeasure.org',
+      code: 'mmol/L',
+    },
   },
 ];
 

@@ -1,11 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { presentResource } from '@myfhir/fhir-renderer';
 import {
-  laboratoryContext, laboratoryReport, laboratoryObservations, observations, resources, bundle, weightHistory,
+  laboratoryContext,
+  laboratoryReport,
+  laboratoryObservations,
+  observations,
+  resources,
+  bundle,
+  weightHistory,
 } from '@myfhir/synthetic';
 import {
-  recordsCatalog, recordsContext, recordsAcquisitionIssues, catalogRecordParams, findCatalogRecord,
-  rendererNativeResource, trendsCatalog,
+  recordsCatalog,
+  recordsContext,
+  recordsAcquisitionIssues,
+  catalogRecordParams,
+  findCatalogRecord,
+  rendererNativeResource,
+  trendsCatalog,
 } from '../../../apps/patient/src/data/clinicalCatalog';
 import { selectTrendRange, weightTrend } from '../../../apps/patient/src/data/weightTrend';
 
@@ -27,21 +38,35 @@ describe('synthetic laboratory Records integration', () => {
       expect(relationship.resolution).toBe('resolved');
       if (relationship.resolution !== 'resolved') throw new Error('Expected fixture result');
       const item = results.items.find((entry) => entry.record === relationship.target)!;
-      expect(item.resource).toEqual(laboratoryObservations.find((resource) => resource.id === item.identity.logicalId));
+      expect(item.resource).toEqual(
+        laboratoryObservations.find((resource) => resource.id === item.identity.logicalId),
+      );
       expect(presentResource(rendererNativeResource(item)).kind).toBe('observation');
-      expect(presentResource(rendererNativeResource(item)).fields.some((field) => field.sourcePath === 'valueQuantity')).toBe(true);
+      expect(
+        presentResource(rendererNativeResource(item)).fields.some(
+          (field) => field.sourcePath === 'valueQuantity',
+        ),
+      ).toBe(true);
       expect(findCatalogRecord(catalogRecordParams(item))).toBe(item);
-      expect(findCatalogRecord({ ...catalogRecordParams(item), source: 'synthetic:foreign-lab' })).toBeUndefined();
-      expect(findCatalogRecord({ ...catalogRecordParams(item), type: 'DiagnosticReport' })).toBeUndefined();
+      expect(
+        findCatalogRecord({ ...catalogRecordParams(item), source: 'synthetic:foreign-lab' }),
+      ).toBeUndefined();
+      expect(
+        findCatalogRecord({ ...catalogRecordParams(item), type: 'DiagnosticReport' }),
+      ).toBeUndefined();
       expect(findCatalogRecord({ ...catalogRecordParams(item), version: '2' })).toBeUndefined();
       expect(findCatalogRecord({ id: item.identity.logicalId })).toBeUndefined();
-      expect(findCatalogRecord({ ...catalogRecordParams(item), version: ['1', '2'] })).toBeUndefined();
+      expect(
+        findCatalogRecord({ ...catalogRecordParams(item), version: ['1', '2'] }),
+      ).toBeUndefined();
     }
   });
 
   it('does not add laboratory records to dashboard, Bundle or the weight series', () => {
     expect(observations).toHaveLength(3);
-    expect(observations[0]?.component?.map((component) => component.valueQuantity?.value)).toEqual([118, 76]);
+    expect(observations[0]?.component?.map((component) => component.valueQuantity?.value)).toEqual([
+      118, 76,
+    ]);
     expect(observations[1]?.valueQuantity?.value).toBe(68);
     expect(observations[2]?.valueQuantity?.value).toBe(72.4);
     expect(resources).toHaveLength(5);
@@ -50,7 +75,11 @@ describe('synthetic laboratory Records integration', () => {
       expect(resources.some((resource) => resource.id === laboratory.id)).toBe(false);
       expect(bundle.entry?.some((entry) => entry.resource?.id === laboratory.id)).toBe(false);
       expect(weightHistory.some((resource) => resource.id === laboratory.id)).toBe(false);
-      expect(weightTrend.series.points.some((point) => point.record.metadata.identity.logicalId === laboratory.id)).toBe(false);
+      expect(
+        weightTrend.series.points.some(
+          (point) => point.record.metadata.identity.logicalId === laboratory.id,
+        ),
+      ).toBe(false);
     }
     expect(weightTrend.series.points).toHaveLength(10);
     expect(selectTrendRange(weightTrend.series.points, '1M').points).toHaveLength(1);
@@ -59,6 +88,8 @@ describe('synthetic laboratory Records integration', () => {
     expect(selectTrendRange(weightTrend.series.points, 'All').points).toHaveLength(10);
     expect(trendsCatalog.historySections[0]?.items).toHaveLength(10);
     expect(recordsCatalog.historySections[0]?.status).toBe('unavailable');
-    expect(recordsCatalog.items.every((item) => !item.capabilities.includes('numerical-history'))).toBe(true);
+    expect(
+      recordsCatalog.items.every((item) => !item.capabilities.includes('numerical-history')),
+    ).toBe(true);
   });
 });

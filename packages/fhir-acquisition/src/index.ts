@@ -114,12 +114,16 @@ function isReportCode(value: unknown): boolean {
   if (text !== undefined && (typeof text !== 'string' || !text.trim())) return false;
   if (
     coding !== undefined &&
-    (!Array.isArray(coding) || !coding.length || !coding.every((entry) =>
-      isObject(entry) &&
-      typeof entry.code === 'string' && entry.code.trim().length > 0 &&
-      (entry.system === undefined ||
-        (typeof entry.system === 'string' && entry.system.trim().length > 0)),
-    ))
+    (!Array.isArray(coding) ||
+      !coding.length ||
+      !coding.every(
+        (entry) =>
+          isObject(entry) &&
+          typeof entry.code === 'string' &&
+          entry.code.trim().length > 0 &&
+          (entry.system === undefined ||
+            (typeof entry.system === 'string' && entry.system.trim().length > 0)),
+      ))
   ) {
     return false;
   }
@@ -175,7 +179,8 @@ export function createAcquisitionStore(): AcquisitionStore {
       if (!isObject(snapshot)) return reject('unsupported-resource-type');
       const { resourceType, id, meta } = snapshot;
       if (
-        resourceType !== 'Patient' && resourceType !== 'Observation' &&
+        resourceType !== 'Patient' &&
+        resourceType !== 'Observation' &&
         resourceType !== 'DiagnosticReport'
       ) {
         return reject('unsupported-resource-type');
