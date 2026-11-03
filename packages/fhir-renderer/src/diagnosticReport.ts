@@ -10,7 +10,6 @@ export function diagnosticReportSummary(resource: DiagnosticReport) {
     'conclusionCode',
     'presentedForm',
     'media',
-    'imagingStudy',
     '_effectiveDateTime',
     '_issued',
   ];
@@ -27,6 +26,16 @@ export function diagnosticReportSummary(resource: DiagnosticReport) {
     result !== undefined &&
     (!Array.isArray(result) ||
       result.some((entry) => typeof entry !== 'object' || entry === null || Array.isArray(entry)))
+  ) {
+    return undefined;
+  }
+  const imagingStudy = ownField(resource, 'imagingStudy');
+  if (
+    imagingStudy !== undefined &&
+    (!Array.isArray(imagingStudy) ||
+      imagingStudy.some(
+        (entry) => typeof entry !== 'object' || entry === null || Array.isArray(entry),
+      ))
   ) {
     return undefined;
   }

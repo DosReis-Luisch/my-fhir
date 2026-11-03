@@ -7,6 +7,7 @@ import {
 } from '@myfhir/fhir-core';
 import type { ResourcePresentation } from './descriptor';
 import { diagnosticReportSummary } from './diagnosticReport';
+import { imagingStudySummary } from './imagingStudy';
 import { hasUnsupportedObservationResult, observationFields } from './observation';
 import { addProfileMetadata, type ProfileInformedPresentation } from './profilePresentation';
 
@@ -62,6 +63,27 @@ export function presentResource(resource: FhirResource): ResourcePresentation {
     ]);
   }
   switch (resource.resourceType) {
+    case 'ImagingStudy': {
+      const summary = imagingStudySummary(resource);
+      if (!summary) {
+        return fallback(resource, [
+          ...notices,
+          `Study status: ${resource.status}. Unsupported study metadata is not summarized.`,
+        ]);
+      }
+      return {
+        kind: 'imaging-study',
+        title: summary.title,
+        subtitle: `Imaging study metadata · ${resource.status}`,
+        fields: summary.fields,
+        notices: [
+          ...notices,
+          'Metadata only: study status does not prove a completed examination or accessible images. No image retrieval or viewing is implemented.',
+          'Reported counts are source assertions; listed metadata may be partial. Dates are shown as supplied, without validation or conversion.',
+        ],
+        source: resource,
+      };
+    }
     case 'DiagnosticReport': {
       const summary = diagnosticReportSummary(resource);
       if (!summary) {
@@ -78,7 +100,7 @@ export function presentResource(resource: FhirResource): ResourcePresentation {
         fields: summary.fields,
         notices: [
           ...notices,
-          'Times are displayed as supplied, without date validation or conversion. Result references are resolved separately by the local catalog.',
+          'Times are displayed as supplied, without date validation or conversion. Result and imaging-study references are resolved separately by the local catalog.',
         ],
         source: resource,
       };

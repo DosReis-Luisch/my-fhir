@@ -12,6 +12,7 @@ import {
   findCatalogRecord,
   rendererNativeResource,
   recordsCatalog,
+  reportsForStudy,
 } from '../../data/clinicalCatalog';
 import { colors } from '../../ui/theme';
 
@@ -42,14 +43,15 @@ export default function RecordDetails() {
           {catalogItem?.resourceType === 'DiagnosticReport' ? (
             <View style={styles.source}>
               <Text accessibilityRole="header" style={styles.title}>
-                Supplied result references
+                Supplied report references
               </Text>
               <Text style={styles.caption}>
-                Links identify local records, not clinical validation or approval of report/results.
-                Report and result statuses are independent. No reference ranges are interpreted.
+                Links identify local records, not clinical validation or approval of reports,
+                results or studies. Their statuses and timestamps are independent. No findings are
+                interpreted.
               </Text>
               {!catalogItem.relationships.length ? (
-                <Text style={styles.caption}>No result references supplied.</Text>
+                <Text style={styles.caption}>No result or imaging study references supplied.</Text>
               ) : null}
               {catalogItem.relationships.map((relationship) => {
                 const target =
@@ -59,6 +61,10 @@ export default function RecordDetails() {
                 return (
                   <View key={relationship.path} style={styles.source}>
                     <Text selectable style={styles.caption}>
+                      {relationship.kind === 'report-imaging-study'
+                        ? 'Imaging study'
+                        : 'Observation result'}
+                      {' · '}
                       {relationship.path}:{' '}
                       {relationship.reference ?? 'Unsupported reference assertion'}
                     </Text>
@@ -72,9 +78,9 @@ export default function RecordDetails() {
                       <Link
                         href={{ pathname: '/record/[id]', params: catalogRecordParams(target) }}
                         style={styles.link}
-                        accessibilityLabel={`View original result ${target.identity.logicalId}`}
+                        accessibilityLabel={`View original ${target.resourceType} ${target.identity.logicalId}`}
                       >
-                        View original Observation: {target.identity.logicalId}
+                        View original {target.resourceType}: {target.identity.logicalId}
                       </Link>
                     ) : (
                       <Text style={styles.caption}>
@@ -87,6 +93,25 @@ export default function RecordDetails() {
                   </View>
                 );
               })}
+            </View>
+          ) : null}
+          {catalogItem?.resourceType === 'ImagingStudy' ? (
+            <View style={styles.source}>
+              <Text accessibilityRole="header" style={styles.title}>
+                Locally linked reports
+              </Text>
+              {reportsForStudy(catalogItem).map((report) => (
+                <Link
+                  key={report.key}
+                  href={{ pathname: '/record/[id]', params: catalogRecordParams(report) }}
+                  style={styles.link}
+                >
+                  View original DiagnosticReport: {report.identity.logicalId}
+                </Link>
+              ))}
+              {!reportsForStudy(catalogItem).length ? (
+                <Text style={styles.caption}>No resolved local report links supplied.</Text>
+              ) : null}
             </View>
           ) : null}
           <View style={styles.source}>

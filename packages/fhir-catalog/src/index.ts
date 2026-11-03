@@ -5,21 +5,35 @@ import type { QuantitySeries } from '@myfhir/fhir-longitudinal';
 export const observationCategorySystem =
   'http://terminology.hl7.org/CodeSystem/observation-category';
 export const diagnosticReportCategorySystem = 'http://terminology.hl7.org/CodeSystem/v2-0074';
-export type ClinicalCategory = 'vital-signs' | 'laboratory-report' | 'laboratory' | 'unclassified';
+export type ClinicalCategory =
+  | 'vital-signs'
+  | 'laboratory-report'
+  | 'laboratory'
+  | 'radiology-report'
+  | 'imaging-study'
+  | 'unclassified';
 export type ClassificationReason =
+  | 'resource-type'
   | 'explicit-category'
   | 'patient-context-resource'
   | 'missing-category'
   | 'unsupported-category'
   | 'ambiguous-category'
   | 'modifier-extension';
-export type CatalogCapability = 'original-resource' | 'renderer-presentation' | 'numerical-history';
-export type ClassificationEvidence = Readonly<{
+type CategoryEvidence = Readonly<{
   path: string;
   system: string | undefined;
   code: string | undefined;
   version: string | undefined;
 }>;
+export type CatalogCapability = 'original-resource' | 'renderer-presentation' | 'numerical-history';
+export type ClassificationEvidence =
+  | CategoryEvidence
+  | Readonly<{
+      kind: 'resource-type';
+      path: 'resourceType';
+      resourceType: 'ImagingStudy';
+    }>;
 export type RelationshipIssue =
   | 'resolution-not-implemented'
   | 'unsupported-reference'
@@ -29,10 +43,10 @@ export type RelationshipIssue =
   | 'multiple-retained-versions'
   | 'ambiguous-target'
   | 'unsafe-report';
-/** Only report-result relationships may resolve; target is the exact acquired snapshot. */
+/** Only explicit report result/study relationships may resolve to an acquired snapshot. */
 export type CatalogRelationship = Readonly<
   {
-    kind: 'assertion' | 'report-result';
+    kind: 'assertion' | 'report-result' | 'report-imaging-study';
     path: string;
     reference: string | undefined;
     sourceContext: PatientContext;
@@ -80,14 +94,23 @@ export type ClinicalCatalog = Readonly<{
 const limitations = Object.freeze([
   'Selected category metadata only; no FHIR, profile, terminology or clinical validation.',
   'Context filtering is consistency, not authorization or cross-source patient matching.',
-  'Only explicit local report-result resolution; no latest-version selection, fetching or persistence.',
+  'Only explicit local report-result/study resolution; no latest-version selection, fetching or persistence.',
   'Category does not imply safe interpretation or numerical eligibility; renderer/analysis policies apply.',
 ]);
-const categories = ['vital-signs', 'laboratory-report', 'laboratory', 'unclassified'] as const;
+const categories = [
+  'vital-signs',
+  'laboratory-report',
+  'laboratory',
+  'radiology-report',
+  'imaging-study',
+  'unclassified',
+] as const;
 const labels = {
   'vital-signs': 'Vital signs and body measurements',
   'laboratory-report': 'Laboratory reports',
   laboratory: 'Laboratory results',
+  'radiology-report': 'Radiology reports',
+  'imaging-study': 'Imaging studies',
   unclassified: 'Other / unclassified clinical records',
 };
 function sameContext(a: PatientContext, b: PatientContext): boolean {
@@ -106,7 +129,23 @@ function text(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 function classify(record: AcquiredResource) {
-  const evidence: ClassificationEvidence[] = [];
+  if (record.resource.resourceType === 'ImagingStudy') {
+    const modified = hasModifier(record.resource);
+    const category: ClinicalCategory = modified ? 'unclassified' : 'imaging-study';
+    const reason: ClassificationReason = modified ? 'modifier-extension' : 'resource-type';
+    return {
+      category,
+      reason,
+      evidence: Object.freeze([
+        Object.freeze({
+          kind: 'resource-type' as const,
+          path: 'resourceType' as const,
+          resourceType: 'ImagingStudy' as const,
+        }),
+      ]),
+    };
+  }
+  const evidence: CategoryEvidence[] = [];
   const raw: unknown = ownField(record.resource, 'category');
   let unsupported = false;
   const report = record.resource.resourceType === 'DiagnosticReport';
@@ -124,7 +163,9 @@ function classify(record: AcquiredResource) {
           );
           if (
             system !== (report ? diagnosticReportCategorySystem : observationCategorySystem) ||
-            (report ? code !== 'LAB' : code !== 'vital-signs' && code !== 'laboratory') ||
+            (report
+              ? code !== 'LAB' && code !== 'RAD'
+              : code !== 'vital-signs' && code !== 'laboratory') ||
             ownField(entry, 'version') !== undefined
           ) {
             unsupported = true;
@@ -144,7 +185,11 @@ function classify(record: AcquiredResource) {
   else if (!evidence.length) reason = 'missing-category';
   else {
     reason = 'explicit-category';
-    category = report ? 'laboratory-report' : (evidence[0]!.code as 'vital-signs' | 'laboratory');
+    category = report
+      ? evidence[0]!.code === 'LAB'
+        ? 'laboratory-report'
+        : 'radiology-report'
+      : (evidence[0]!.code as 'vital-signs' | 'laboratory');
   }
   return { category, reason, evidence: Object.freeze(evidence) };
 }
@@ -152,7 +197,12 @@ function relationships(
   record: AcquiredResource,
   records: readonly AcquiredResource[],
 ): readonly CatalogRelationship[] {
-  if (record.resource.resourceType === 'DiagnosticReport') return reportResults(record, records);
+  if (record.resource.resourceType === 'DiagnosticReport') {
+    return Object.freeze([
+      ...reportReferences(record, records, 'result'),
+      ...reportReferences(record, records, 'imagingStudy'),
+    ]);
+  }
   if (record.resource.resourceType !== 'Observation') return Object.freeze([]);
   const result: CatalogRelationship[] = [];
   for (const field of [
@@ -187,12 +237,13 @@ function relationships(
   return Object.freeze(result);
 }
 
-/** Resolve direct relative report results only; inspect ALL retained records before context filtering. */
-function reportResults(
+/** Two explicit report fields only; inspect ALL retained targets before context filtering. */
+function reportReferences(
   report: AcquiredResource,
   records: readonly AcquiredResource[],
+  field: 'result' | 'imagingStudy',
 ): readonly CatalogRelationship[] {
-  const raw = ownField(report.resource, 'result');
+  const raw = ownField(report.resource, field);
   if (raw === undefined) return Object.freeze([]);
   const entries = Array.isArray(raw) ? raw : [raw];
   const retained = [...new Set(records)];
@@ -201,28 +252,33 @@ function reportResults(
     entries.map((entry, index): CatalogRelationship => {
       const reference = text(ownField(entry, 'reference'));
       const assertion = {
-        kind: 'report-result' as const,
-        path: Array.isArray(raw) ? `result[${index}]` : 'result',
+        kind: (field === 'result'
+          ? 'report-result'
+          : 'report-imaging-study') as CatalogRelationship['kind'],
+        path: Array.isArray(raw) ? `${field}[${index}]` : field,
         reference,
         sourceContext: report.metadata.patientContext,
       };
       const unresolved = (reason: RelationshipIssue): CatalogRelationship =>
         Object.freeze({ ...assertion, resolution: 'unresolved', reason });
-      const match = reference && /^Observation\/([A-Za-z0-9.-]{1,64})$/.exec(reference);
+      const targetType = field === 'result' ? 'Observation' : 'ImagingStudy';
+      const match =
+        reference && /^(Observation|ImagingStudy)\/([A-Za-z0-9.-]{1,64})$/.exec(reference);
       if (
         !Array.isArray(raw) ||
         !match ||
         match[0] !== reference ||
+        match[1] !== targetType ||
         ownField(entry, 'identifier') !== undefined ||
-        (ownField(entry, 'type') !== undefined && ownField(entry, 'type') !== 'Observation')
+        (ownField(entry, 'type') !== undefined && ownField(entry, 'type') !== targetType)
       ) {
         return unresolved('unsupported-reference');
       }
       if (unsafe) return unresolved('unsafe-report');
       const candidates = retained.filter(
         (target) =>
-          target.metadata.identity.resourceType === 'Observation' &&
-          target.metadata.identity.logicalId === match[1],
+          target.metadata.identity.resourceType === targetType &&
+          target.metadata.identity.logicalId === match[2],
       );
       const sameSource = candidates.filter(
         (target) =>
@@ -280,7 +336,9 @@ export function buildClinicalCatalog(
       continue;
     }
     const capabilities: CatalogCapability[] = ['original-resource', 'renderer-presentation'];
-    if (numerical.has(record)) capabilities.push('numerical-history');
+    if (record.resource.resourceType === 'Observation' && numerical.has(record)) {
+      capabilities.push('numerical-history');
+    }
     items.push(
       Object.freeze({
         key: JSON.stringify([

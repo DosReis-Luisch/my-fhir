@@ -84,7 +84,7 @@ describe('conservative DiagnosticReport presentation', () => {
     },
     { presentedForm: [{ contentType: 'application/pdf', url: 'urn:fictional:pdf' }] },
     { media: [{ link: { reference: 'Media/fictional-image' } }] },
-    { imagingStudy: [{ reference: 'ImagingStudy/fictional' }] },
+    { imagingStudy: 'malformed' },
     { effectivePeriod: { start: '2026-10-15', end: '2026-10-16' } },
     { modifierExtension: [{ url: 'urn:fictional:modifier', valueBoolean: true }] },
   ] as const)('falls back for unsupported content without interpreting it: %j', (fields) => {

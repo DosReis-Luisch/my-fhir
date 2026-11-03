@@ -13,7 +13,7 @@ export function ResourceCard({
   recordParams?: { id: string; source: string; type: string; version?: string };
 }) {
   const fields =
-    compact && presentation.kind !== 'diagnostic-report'
+    compact && presentation.kind !== 'diagnostic-report' && presentation.kind !== 'imaging-study'
       ? presentation.fields.filter(
           (field) => field.sourcePath !== 'effectiveDateTime' && field.sourcePath !== 'status',
         )
@@ -46,7 +46,7 @@ export function ResourceCard({
           View record →
         </Link>
       ) : null}
-      {!compact || presentation.kind === 'generic'
+      {!compact || presentation.kind === 'generic' || presentation.kind === 'imaging-study'
         ? presentation.notices.map((notice) => (
             <Text key={notice} style={styles.notice}>
               {notice}

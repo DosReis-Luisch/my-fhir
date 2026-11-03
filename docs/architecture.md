@@ -533,8 +533,9 @@ November 3 SDK 57 dependency-security baseline and its release prerequisites rem
 ### Laboratory results and DiagnosticReports (Phase 4B)
 
 Data flow is native FHIR acquisition -> clinical catalog -> explicit local report/result
-relationships -> renderer and Records UI. This source-only slice is **awaiting maintainer
-validation and GitHub code review; not complete**. It adds no workspace, external dependency,
+relationships -> renderer and Records UI. Phase 4B merged through **PR #12**, commit
+`543d718`. Web/iPhone runtime acceptance remains unverified; no new validation results
+are claimed here. The Phase 4B slice added no workspace, external dependency,
 backend, networking, persistence, authentication or terminology service. The November 3
 SDK 57 security assessment remains unchanged and unresolved; synthetic demonstration and
 local context checks are not authorization, clinical validation or production approval.
@@ -650,3 +651,140 @@ metadata and content retrieval/viewing, external reference/contained/versioned r
 and authentication, authorization, verified provenance and protected storage. This milestone
 implements none of those capabilities or dependencies. Outstanding Phase 4A and Phase 3C
 web/iPhone checks remain outstanding until the maintainer records runtime evidence.
+
+### Imaging studies and radiology reports (Phase 4C)
+
+This slice adds a fictional ImagingStudy and radiology DiagnosticReport through the existing
+acquisition -> catalog -> local relationships -> renderer/Records flow. It is source-only,
+**awaiting maintainer validation and GitHub review; not complete**. The Phase 4B laboratory
+fixtures, original three dashboard measurements, Bundle membership, Patient, ten-point
+weight history, Trends chart/ranges and longitudinal implementation remain unchanged.
+No new workspace, external dependency, endpoint, image viewer, backend, network call or
+persistence is added. The SDK 57 dependency-security baseline remains unresolved and its
+external-connection, real-data and release prerequisites still apply.
+
+#### Native acquisition and metadata limits
+
+`fhir-core` exports native R4 `ImagingStudy` and the portable boolean helper
+`hasSupportedImagingStudyMetadata(unknown)`. The helper inspects selected metadata shapes,
+not full FHIR/DICOM conformance and not a TypeScript resource type predicate. It is shared
+by acquisition and rendering to avoid two conflicting shape policies. Acquisition accepts
+exactly Patient, Observation, DiagnosticReport and ImagingStudy. Studies require valid
+logical ID/optional version, a recognized status (`registered`, `available`, `cancelled`,
+`entered-in-error`, `unknown`) and the existing exact relative `Patient/<id>` subject in
+the supplied source/patient context. Group/Device, missing, foreign, identifier-only and
+ambiguous subjects remain unsupported. JSON bounds, detached frozen snapshots, source/type/ID
+identity, separate version and duplicate/content-conflict rules are unchanged.
+
+Supplied descriptions/start strings must be nonempty strings; counts/sequence numbers must
+be nonnegative safe integers. Modality and SOP Class metadata require coding objects with
+nonempty system/code and string display/version when supplied. Identifiers require nonempty
+values and string systems when supplied; `urn:dicom:uid` values require an explicit
+`urn:oid:` numeric dotted UID. Supplied series must be arrays with a UID and modality;
+supplied instances must be arrays with a UID and SOP Class coding. UIDs receive limited
+numeric dotted syntax/length checks, not allocation, uniqueness or DICOM conformance checks.
+Malformed supported fields are rejected as `invalid-imaging-study-shape`, never repaired.
+Absent optional study identifiers, series or instances remain absent; no DICOM object or
+missing UID is manufactured. Unknown/unsupported fields remain in the original snapshot.
+These guards do not validate terminology, clinical accuracy, count consistency, UID provenance,
+FHIR invariants or whether any pixels exist. Times remain strings with supplied precision;
+calendar/timezone validity is not established and no date is invented or converted.
+
+#### Classification and local relationships
+
+An ImagingStudy describes study/series/instance metadata; a DiagnosticReport is a separate
+report with independent status, category and dates. Neither is an image payload or proof
+of a completed examination. Studies classify from native `resourceType: ImagingStudy`,
+using explicit `{ kind: 'resource-type', path: 'resourceType', resourceType: 'ImagingStudy' }`
+evidence. No Observation category coding is invented. Unsupported modifier semantics force
+unclassified while preserving discoverability and the original resource.
+
+`ClinicalCategory` adds `radiology-report` and `imaging-study`; `ClassificationReason` adds
+`resource-type`; `ClassificationEvidence` includes a resource-type evidence union member.
+Reports require exact unversioned system
+`http://terminology.hl7.org/CodeSystem/v2-0074` and code `RAD` for radiology, or the existing
+`LAB` for laboratory. All supplied report category codings must be supported and agree.
+Mixed LAB/RAD, unknown, foreign, malformed or versioned categories and modifier-bearing
+records stay unclassified with evidence/reasons. A report's title, code display, narrative,
+filename or imagingStudy reference cannot establish radiology classification. Existing
+Observation category rules and independent result classification remain unchanged.
+Nonempty Records groups order vital signs, laboratory reports, laboratory results,
+radiology reports, imaging studies and other/unclassified. Counts refer to separate records.
+
+The same narrowly scoped resolver now accepts exactly two report fields:
+`result -> Observation/<id>` and `imagingStudy -> ImagingStudy/<id>`.
+`CatalogRelationship.kind` adds `report-imaging-study`. Both sets coexist; result assertions
+precede study assertions and the supplied order within each FHIR array is preserved.
+The resolver requires an already acquired exact-type target with identical source namespace
+and patient context. All retained same-source identity versions are inspected before patient
+filtering, so an out-of-context revision cannot make a target appear authoritative.
+Multiple versions remain unresolved as `multiple-retained-versions`; distinct duplicate
+snapshots at one version remain `ambiguous-target`. No version string is ranked. Repeated
+references to the same acquired object are not extra targets; duplicate supplied assertions
+retain their paths without manufacturing records.
+
+Missing, foreign-source, foreign-patient, malformed or unsafe links retain existing explicit
+reason codes. Absolute URLs, contained references, history/version paths, identifier-only
+assertions, reference-plus-identifier assertions and incompatible target types remain
+unsupported. Original assertions remain in native JSON at their source path. Existing
+Observation assertions stay unresolved; no recursive graph traversal or external fetch is
+performed. Resolution is a structural consistency statement, not clinical approval or
+authorization. The caller must supply all retained versions; omitted versions cannot be
+detected. General external resolution remains future work.
+
+#### Metadata presentation and navigation
+
+`ResourcePresentation.kind` adds `imaging-study`. Registered/available studies with supported
+metadata can show supplied description, status, start string, identifiers, reported counts,
+listed series/instance metadata counts, raw modality coding, series descriptions/UIDs and
+SOP Instance UIDs. Reported counts are never calculated from listed metadata or reconciled
+as authoritative totals. Omitted lists do not imply zero instances. Supported modality
+coding uses the exact unversioned DICOM DCM system; unknown codes within that system are
+shown verbatim without invented friendly names. Unsupported systems/versions, malformed
+metadata, cancelled/error/unknown statuses, modifier extensions, narratives, notes and
+retrieval endpoints fall back conservatively to preserved originals. The metadata-only
+notice is visible on compact study cards and in details.
+
+Study/Series/SOP Instance UIDs are source-supplied imaging identifiers, distinct from the
+source-qualified FHIR logical ID/version used in local navigation. A study UID appears as
+an Identifier, not an invented ImagingStudy.uid field. Listed instances describe metadata;
+they contain no supplied pixels, decoded image, thumbnail, retrieval endpoint or viewer.
+UIDs and identifier URIs are plain text; the app does not open them.
+
+DiagnosticReport presentation now permits an imagingStudy reference array alongside result
+references while preserving final-status and unsupported-content policy. Non-final reports
+and narratives/conclusions/media/PDF attachments still fall back. Local reference resolution
+is separate from metadata summarization. Study.started, report.effectiveDateTime and
+report.issued remain distinct supplied source fields; none substitutes for another. No
+radiological findings, conclusions, normality or treatment advice are interpreted.
+
+The app explicitly acquires `imagingStudy` and `radiologyReport` from the separate synthetic
+`imaging.ts` module with its declared `imagingContext`. It verifies that context exactly
+matches the intentionally shared dashboard source/patient, rather than relabelling another
+source. The fixture contains one structured series and one SOP Instance metadata entry,
+fictional UIDs and timestamps, with no real hospital identifiers, pixels or retrieval URLs.
+Original `resources`/Bundle membership is unchanged.
+
+Records renders independent report/study groups. Existing record details distinguish supplied
+result and study references, show resolved targets through the existing ResourceCard and
+show unresolved reasons instead of dropping assertions. Generic/non-final reports retain
+identity links without finalized target summaries. Study details list inbound report links
+using only already resolved catalog evidence (`reportsForStudy`); this is not a second
+resolver or inferred relationship. Every new link carries source/type/ID/version. Invalid
+or ambiguous qualified links cannot fall back to bare IDs; legacy links remain restricted
+to original fixed-demo records. Original FHIR JSON and Back navigation remain available.
+No numerical imaging capability or completed imaging timeline is introduced.
+
+Synthetic tests cover acquisition shape/status/subject/ID/version/conflict/preservation,
+resource-type and RAD classification, unclassified retention, mixed result/study references,
+source/patient/version ambiguity, duplicates, unsupported references, immutable descriptors,
+safe metadata rendering, independent dates, app navigation and laboratory/dashboard/Bundle/
+Trends preservation. No tests, installation, builds, formatters or Expo commands were run.
+Maintainer validation must run focused/full tests, TypeScript, lint, formatting and web/iPhone
+Records/detail/accessibility checks, including both navigation directions and existing flows.
+
+Future authorized adapters must separately define DICOMweb QIDO-RS query and WADO-RS
+retrieval, authenticated external sources, ownership/authorization of every study/series/
+instance, UID-to-endpoint trust, large payload limits, cancellation/caching, protected storage,
+privacy/retention, document/PDF viewing and reviewed imaging timelines. None of these is
+implemented here; metadata availability is not permission or technical ability to fetch images.

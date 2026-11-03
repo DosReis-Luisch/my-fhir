@@ -90,7 +90,7 @@ describe('laboratory report catalog', () => {
       'unsupported-category',
     ],
     [
-      { category: [{ coding: [{ system: diagnosticReportCategorySystem, code: 'RAD' }] }] },
+      { category: [{ coding: [{ system: diagnosticReportCategorySystem, code: 'OTHER' }] }] },
       'unsupported-category',
     ],
     [

@@ -6,6 +6,7 @@ export type {
   CodeableConcept,
   DiagnosticReport,
   HumanName,
+  ImagingStudy,
   Observation,
   Organization,
   Patient,
@@ -23,6 +24,7 @@ export type {
   StructureDefinitionMetadata,
 } from './structureDefinition';
 export { matchDeclaredProfiles } from './profiles';
+export { hasSupportedImagingStudyMetadata } from './imagingStudy';
 export type { DeclaredProfileMatch } from './profiles';
 
 export function isResource<T extends FhirResource['resourceType']>(
