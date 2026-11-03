@@ -8,8 +8,8 @@ behavior and [development](development.md) for historical validation and manual 
 ## Completed milestones: Phase 0 through Phase 2A
 
 Completion describes delivered scope, not production certification. Historical validation
-results are not rerun results for this milestone. Phase 3A validation status is recorded
-separately below; no automated checks were executed during its implementation.
+results are not rerun results for this milestone. Phase 3A maintainer validation and Phase 3B
+pending validation are recorded separately below; no automated checks were run for Phase 3B.
 
 | Milestone | Goal / delivered scope                                                                   | Main dependencies                                 | Acceptance / remaining limits                                                                              | Current status                                                                                |
 | --------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -51,25 +51,33 @@ All implementation uses synthetic data until the real-data gate below is satisfi
   idempotent; reject/hold malformed or ambiguous patient associations with explicit reasons.
   Add focused synthetic tests and accurately state validation limits. Context checks here
   enforce import consistency, not a substitute for server authorization.
-- **Status:** Implemented in source as `@myfhir/fhir-acquisition`, awaiting maintainer
-  validation/review; **not complete**. The in-memory store exposes `acquire` and `records`,
+- **Status:** Phase 3A implemented and maintainer-validated: installation completed,
+  **163 tests passed**, TypeScript and lint passed, and formatting passed using
+  `--end-of-line auto`. These are Phase 3A baseline results, not Phase 3B results.
+  The in-memory store exposes `acquire` and `records`,
   preserves immutable native-resource snapshots with separate metadata, checks exact relative
   Patient references in an explicit source context, and reports duplicates/rejections/content
   conflicts without overwriting or selecting a latest version. Basic JSON/shape guards do
   not establish FHIR conformance or authorization; there is no renderer/UI integration.
-  See [implemented boundary and limits](architecture.md#source-aware-synthetic-acquisition-phase-3a-validation-pending).
-  Focused tests are written but unexecuted. Maintainer must regenerate workspace links/lockfile
-  with root `npm install`, then run the focused/full tests, typecheck, lint and format checks.
-  No install, test, build, formatting or Expo command was run during implementation.
+  See [implemented boundary and limits](architecture.md#source-aware-synthetic-acquisition-phase-3a).
 
-### 3. Longitudinal FHIR Observation engine
+### 3. Longitudinal FHIR Observation engine (Phase 3B)
 
 - **Goal:** Extract one supported coded Quantity series as portable, disposable analysis.
 - **Dependencies:** Item 2; patient/source context and time/unit policy.
 - **Acceptance:** Isolate patients, retain source references, preserve effective-time
   precision and status; separate incompatible codes/units, handle missing/unsupported values
   explicitly and avoid normality or treatment inference. Cover deterministic synthetic cases.
-- **Status:** Planned; no longitudinal engine currently implemented.
+- **Status:** Implemented in source as `@myfhir/fhir-longitudinal`, **awaiting validation;
+  not complete**. One exact coding/coded-unit Quantity series, final status only, explicit
+  source/patient context, complete effective timestamps and retained acquisition references.
+  Unsupported units/forms/contexts/modifiers and ambiguous revisions are explicitly excluded;
+  no unit conversion, latest-version inference, clinical conclusions, charts or UI wiring.
+  See [implemented policy and limits](architecture.md#longitudinal-coded-quantity-analysis-phase-3b-validation-pending).
+  Synthetic tests cover historical sorting, isolation, exclusions, revisions and preservation.
+  Maintainer must install/register the workspace and regenerate the lockfile, then run focused
+  and full tests, typecheck, lint and format checks (with `--end-of-line auto` as appropriate).
+  No installation, test, build, formatter or Expo was run during Phase 3B implementation.
 
 ### 4. Trends and graphs
 

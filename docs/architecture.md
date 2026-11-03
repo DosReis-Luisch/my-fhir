@@ -209,7 +209,7 @@ and remain explicitly unresolved in the original renderer. Callers can separatel
 known local definitions through fhir-core or opt into the Phase 1B composition. This is
 not universal FHIR/profile support.
 
-### Source-aware synthetic acquisition (Phase 3A, validation pending)
+### Source-aware synthetic acquisition (Phase 3A)
 
 `packages/fhir-acquisition` is a private portable workspace, depending only on
 `@myfhir/fhir-core`. It separates acquisition state from clinical helpers and rendering for
@@ -277,11 +277,78 @@ an adversarial file parser. In-memory state is discarded with the store; conflic
 only the prior record, and callers retain rejected/conflicting input for any later review.
 The package does not choose retention or synchronization policies.
 
-Focused Vitest cases were added under `packages/fhir-acquisition/tests`; they have **not
-been run**. Phase 3A remains implementation awaiting maintainer validation and review.
-The existing workspace/test globs discover the package without config changes. The new
-workspace requires the maintainer to run `npm install` from the root to update workspace
-links and `package-lock.json`; neither installation nor lockfile regeneration was run here.
+Maintainer-reported Phase 3A validation: installation completed, **163 tests passed**,
+TypeScript and lint passed, and formatting passed with `--end-of-line auto`. These results
+apply to the Phase 3A baseline; they are not validation of Phase 3B. The existing workspace
+and test globs discover these packages without config changes.
+
+### Longitudinal coded Quantity analysis (Phase 3B, validation pending)
+
+`packages/fhir-longitudinal` is a separate private portable workspace depending only on
+`@myfhir/fhir-acquisition` and `@myfhir/fhir-core`. Analysis stays separate from acquisition
+state and presentation; it introduces no generic analysis framework or external runtime
+dependencies. No existing screens, synthetic dashboard values, rendering or profile
+inspection behavior change.
+
+`analyzeQuantitySeries(records, request)` accepts immutable acquired snapshots and an
+explicit `patientContext` plus `measurement: { coding: { system, code }, unit: { system, code } }`.
+Each call supports exactly one coding and one coded unit, acting as an explicit singleton
+unit allowlist; there is no built-in clinical measurement catalog. The caller is responsible
+for choosing an appropriate selection. Invalid empty/whitespace selection or invalid patient
+ID throws `RangeError`; empty input returns an empty series with limitations.
+
+The engine matches both the source-qualified acquisition identity/context and Patient
+reference. Different namespaces are never reconciled, even with identical bare IDs.
+Context filtering is analysis consistency only, not authorization. `store.records()` may
+span patients/sources and is not an authorized query. The engine does not mutate input or
+invoke a renderer; full FHIR/profile/terminology/clinical validation is not performed.
+
+Supported selection is deliberately narrow:
+
+- Observation status must be exactly `final`; all other statuses, including cancelled,
+  entered-in-error, amended and corrected, are excluded.
+- `code.coding` must contain exactly one entry with the exact, case-sensitive supplied
+  system/code and no coding version. Display/text is never used to infer meaning or
+  equivalence. Additional/alternative codings are excluded rather than reconciled.
+- `valueQuantity.value` must be a finite number, including zero. Quantity system/code must
+  match the selected unit exactly; unit display text is not identity. There are no conversions.
+  Any comparator is excluded because a bound is not an exact measurement.
+- Other `value[x]` choices, components, dataAbsentReason and any supplied specimen, method
+  or bodySite are excluded, even alongside an otherwise usable Quantity. No context matching
+  or clinical comparability is inferred from absent fields.
+- Nonempty or malformed modifierExtension anywhere in the resource excludes it. Ordinary
+  unknown fields/extensions remain untouched; no profile/extension semantics are resolved.
+- Clinically effective time must be a complete `effectiveDateTime` with seconds and a known
+  explicit `Z` or numeric offset. Gregorian calendar/time/offset bounds are checked; fractions
+  are supported only to three digits. Partial dates, missing zone/seconds, invalid dates,
+  leap seconds, unknown `-00:00` offsets and other/competing effective forms are excluded.
+  Offset limits are +/-14:00. Supplied strings/precision are preserved. Instants are calculated
+  only for ordering; no acquisition/issued timestamp substitutes for clinical effective time.
+
+Before clinical selection, the entire supplied collection is grouped by source/type/logical
+ID, independently of version and patient context. Every relevant revision of a multi-version
+Observation identity is excluded as `multiple-retained-versions`; an absent version plus a
+supplied version is also ambiguous. An older cancelled or differently associated revision
+cannot be hidden by filtering first. Repeated same-identity/version entries (even repeated
+references) are conservatively excluded as `repeated-observation-identity`. No authoritative
+current-version selector is implemented; no numeric/lexical version ordering is used. A
+caller omitting retained revisions cannot be detected by this engine. Independent IDs with
+equal values remain distinct events.
+
+The frozen, disposable `QuantitySeries` contains measurement coding/unit, a copied patient
+context, ordered `MeasurementPoint` objects, `ObservationExclusion` objects and limitations.
+Each point retains its exact `AcquiredResource` object reference and supplied effective time;
+source identity, version and native resource remain available through `point.record`.
+Exclusions also retain the original record and one explicit reason (the first failing guard).
+Points order by instant, then original timestamp string and source-qualified identity for
+ties; exclusions order by identity/version/reason/content for deterministic results independent
+of input order. No range, normality, diagnosis, treatment or clinical-comparability result
+is produced. Exported selection/result types include `CodingSelection`, `QuantitySeriesRequest`,
+`MeasurementPoint`, `ExclusionReason`, `ObservationExclusion` and `QuantitySeries`.
+
+Phase 3B source and synthetic tests are written but **unvalidated**. The new workspace needs
+maintainer installation/lockfile regeneration before validation. No install, tests, build,
+formatter or Expo was run in this milestone; `package-lock.json` was left unchanged.
 
 No authentication, network access, database, server, persistence, cloud services, FHIRPath,
 terminology lookup, full profile resolution, or clinical decision support is implemented.
