@@ -5,11 +5,18 @@ See [integration architecture](integration-architecture.md) for identity, author
 acquisition and lifecycle boundaries, [architecture](architecture.md) for implemented engine
 behavior and [development](development.md) for historical validation and manual checks.
 
+The [3 November 2026 SDK 57 security baseline](security/dependency-audit.md#sdk-57-security-baseline--3-november-2026)
+records 27 reported vulnerable dependency entries (five high), or 16 (five high) with
+`--omit=dev`; these inherited counts do not establish application-runtime exposure.
+Findings remain unresolved; automatic fixes and blanket overrides are not approved.
+Its monitoring and reassessment prerequisites apply before external connections, real
+patient data or production distribution. The historical Phase 0.2 assessment is preserved.
+
 ## Completed milestones: Phase 0 through Phase 2A
 
 Completion describes delivered scope, not production certification. Historical validation
-results are not rerun results for this milestone. Phase 3A maintainer validation and Phase 3B
-pending validation are recorded separately below; no automated checks were run for Phase 3B.
+results are not rerun results for this milestone. Phase 3A/3B maintainer validation and Phase 3C
+pending validation are recorded separately below; no automated checks were run for Phase 3C.
 
 | Milestone | Goal / delivered scope                                                                   | Main dependencies                                 | Acceptance / remaining limits                                                                              | Current status                                                                                |
 | --------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -68,18 +75,17 @@ All implementation uses synthetic data until the real-data gate below is satisfi
 - **Acceptance:** Isolate patients, retain source references, preserve effective-time
   precision and status; separate incompatible codes/units, handle missing/unsupported values
   explicitly and avoid normality or treatment inference. Cover deterministic synthetic cases.
-- **Status:** Implemented in source as `@myfhir/fhir-longitudinal`, **awaiting validation;
-  not complete**. One exact coding/coded-unit Quantity series, final status only, explicit
+- **Status:** Phase 3B merged via **PR #9**. Maintainer reports **224 tests passed**,
+  TypeScript and ESLint passed, and Prettier passed with `--end-of-line auto`.
+  One exact coding/coded-unit Quantity series, final status only, explicit
   source/patient context, complete effective timestamps and retained acquisition references.
   Unsupported units/forms/contexts/modifiers and ambiguous revisions are explicitly excluded;
   no unit conversion, latest-version inference, clinical conclusions, charts or UI wiring.
-  See [implemented policy and limits](architecture.md#longitudinal-coded-quantity-analysis-phase-3b-validation-pending).
+  See [implemented policy and limits](architecture.md#longitudinal-coded-quantity-analysis-phase-3b).
   Synthetic tests cover historical sorting, isolation, exclusions, revisions and preservation.
-  Maintainer must install/register the workspace and regenerate the lockfile, then run focused
-  and full tests, typecheck, lint and format checks (with `--end-of-line auto` as appropriate).
-  No installation, test, build, formatter or Expo was run during Phase 3B implementation.
+  These baseline results are not Phase 3C validation.
 
-### 4. Trends and graphs
+### 4. Trends and graphs (Phase 3C)
 
 - **Goal:** Render one engine-produced series with a selectable time range and accessible
   values; keep clinical grouping out of UI.
@@ -87,7 +93,18 @@ All implementation uses synthetic data until the real-data gate below is satisfi
 - **Acceptance:** Correct time/unit labels, empty/gap states, original-record navigation,
   readable narrow/large-text layouts and equivalent accessible values; no invented points,
   silently joined incompatible data or inferred normality.
-- **Status:** Planned; graph implementation is separate from series extraction.
+- **Status:** First screen implemented in source, **pending validation; not complete**.
+  Trends tab uses ten separate fictional body-weight Observations through acquisition and
+  longitudinal analysis, without modifying dashboard fixtures/Bundle or engine behavior.
+  1M/6M/1Y/All ranges use calendar windows anchored to the latest engine point; SVG uses
+  actual time spacing and stable zero-based kg scaling. An accessible chronological list
+  links to source/type/ID/version-qualified original record details, including raw JSON.
+  See [implementation and limitations](architecture.md#first-body-weight-trends-screen-phase-3c-validation-pending).
+  `react-native-svg` 15.15.4 matches the local Expo 57.0.30 compatibility map; maintainer must
+  install it, regenerate the lockfile, run focused/full tests and typecheck/lint/format checks,
+  and verify web/iPhone chart layout, accessibility and navigation. No commands were run
+  for installation, tests, builds, formatting or Expo during implementation. More measurements,
+  interactive chart features and clinical interpretation remain outside this slice.
 
 ### 5. Local FHIR R4 file and Bundle import
 

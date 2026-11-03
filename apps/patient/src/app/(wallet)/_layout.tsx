@@ -21,6 +21,10 @@ export default function WalletLayout() {
         name="records"
         options={{ title: 'Records', tabBarAccessibilityLabel: 'Records' }}
       />
+      <Tabs.Screen
+        name="trends"
+        options={{ title: 'Trends', tabBarAccessibilityLabel: 'Trends' }}
+      />
       <Tabs.Screen name="me" options={{ title: 'Me', tabBarAccessibilityLabel: 'Me' }} />
     </Tabs>
   );
