@@ -15,8 +15,8 @@ patient data or production distribution. The historical Phase 0.2 assessment is 
 ## Completed milestones: Phase 0 through Phase 2A
 
 Completion describes delivered scope, not production certification. Historical validation
-results are not rerun results for this milestone. Phase 3A/3B maintainer validation and Phase 3C
-pending validation are recorded separately below; no automated checks were run for Phase 3C.
+results are not rerun results for this milestone. Phase 3A/3B validation and the Phase 3C
+merge are recorded below; web/iPhone runtime verification remains outstanding.
 
 | Milestone | Goal / delivered scope                                                                   | Main dependencies                                 | Acceptance / remaining limits                                                                              | Current status                                                                                |
 | --------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -93,18 +93,42 @@ All implementation uses synthetic data until the real-data gate below is satisfi
 - **Acceptance:** Correct time/unit labels, empty/gap states, original-record navigation,
   readable narrow/large-text layouts and equivalent accessible values; no invented points,
   silently joined incompatible data or inferred normality.
-- **Status:** First screen implemented in source, **pending validation; not complete**.
+- **Status:** Phase 3C merged through **PR #10**, commit `15408b1`. The maintainer
+  previously reported **234 tests passed**, TypeScript, ESLint, Prettier and Expo Doctor
+  passed. These are historical results, not Phase 4A validation. Web/iPhone runtime
+  verification remains outstanding, including chart layout, VoiceOver, range switching,
+  record-detail/direct-link navigation and the web console warning fix.
   Trends tab uses ten separate fictional body-weight Observations through acquisition and
   longitudinal analysis, without modifying dashboard fixtures/Bundle or engine behavior.
   1M/6M/1Y/All ranges use calendar windows anchored to the latest engine point; SVG uses
   actual time spacing and stable zero-based kg scaling. An accessible chronological list
   links to source/type/ID/version-qualified original record details, including raw JSON.
-  See [implementation and limitations](architecture.md#first-body-weight-trends-screen-phase-3c-validation-pending).
-  `react-native-svg` 15.15.4 matches the local Expo 57.0.30 compatibility map; maintainer must
-  install it, regenerate the lockfile, run focused/full tests and typecheck/lint/format checks,
-  and verify web/iPhone chart layout, accessibility and navigation. No commands were run
-  for installation, tests, builds, formatting or Expo during implementation. More measurements,
+  See [implementation and limitations](architecture.md#first-body-weight-trends-screen-phase-3c-merged-runtime-verification-pending).
+  Expo 57.0.31, Router 57.0.29 and `react-native-svg` 15.15.4 are retained in the merged
+  dependency baseline. No checks were rerun for this documentation update. More measurements,
   interactive chart features and clinical interpretation remain outside this slice.
+
+### 4A. Clinical catalog and organization
+
+- **Goal:** Share disposable source/patient-scoped organization between Records and Trends.
+- **Dependencies:** Existing acquisition, conservative renderer and longitudinal engines;
+  Phase 3C merged before implementation.
+- **Status:** Implemented in source as `@myfhir/fhir-catalog`, **awaiting maintainer
+  validation; not complete**. Exact supported Observation category coding groups vital
+  signs, laboratory and other/unclassified records, with evidence and explicit limits.
+  Patient descriptors retain context; clinical groups contain Observations only. Source,
+  type, ID and available version remain distinct; no latest version is chosen.
+  Records uses nonempty catalog groups/counts and qualified detail links. Trends uses
+  catalog history labels/capabilities while preserving the engine series, chart and fixtures.
+  Supplied references remain unresolved; no traversal or fetching is implemented.
+- **Acceptance / remaining work:** Register the workspace and regenerate/review the lockfile
+  locally; run focused/full tests, TypeScript, lint and formatting checks, Expo compatibility
+  and web/iPhone navigation/accessibility checks. No installs, tests, builds, formatters or
+  Expo commands were run during Phase 4A implementation. Security reassessment gates above
+  remain in force. See [catalog boundary](architecture.md#clinical-catalog-and-organization-phase-4a).
+- **Deferred:** General search/filter UI, report/imaging/document acquisition, DICOM retrieval
+  and viewing, reference resolution, non-numerical timelines, clinical validation and
+  laboratory interpretation. These need separate reviewed slices, not category aliases.
 
 ### 5. Local FHIR R4 file and Bundle import
 

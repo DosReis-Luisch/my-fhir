@@ -12,6 +12,7 @@ import {
 } from '../../data/weightTrend';
 import { Page } from '../../ui/Page';
 import { WeightTrendChart } from '../../ui/WeightTrendChart';
+import { trendsCatalog } from '../../data/clinicalCatalog';
 import { colors } from '../../ui/theme';
 
 export default function Trends() {
@@ -32,6 +33,9 @@ export default function Trends() {
         </Text>
       </View>
       <View style={styles.card}>
+        <Text accessibilityRole="header" style={styles.title}>
+          {trendsCatalog.historySections[0]!.label}
+        </Text>
         <Text accessibilityRole="header" style={styles.title}>
           Body weight · {unit}
         </Text>
@@ -114,6 +118,15 @@ export default function Trends() {
           ))}
         </View>
       ) : null}
+      <View style={styles.section}>
+        <Text accessibilityRole="header" style={styles.title}>
+          {trendsCatalog.historySections[1]!.label}
+        </Text>
+        <Text style={styles.description}>
+          Planned for later: reports, imaging and conditions need reviewed timeline views. No
+          additional history is available in this demo.
+        </Text>
+      </View>
       <Text selectable style={styles.description}>
         Fictional source: {series.patientContext.sourceNamespace}. Patient:{' '}
         {series.patientContext.patientId}. Context consistency is not authorization. This view does

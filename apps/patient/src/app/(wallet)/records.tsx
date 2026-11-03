@@ -2,7 +2,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import { resourceReference } from '@myfhir/fhir-core';
 import { presentResource } from '@myfhir/fhir-renderer';
 import { patient } from '@myfhir/synthetic';
-import { demoOrganizations, demoPatientObservations } from '../../data/demoRecords';
+import { demoOrganizations } from '../../data/demoRecords';
+import {
+  catalogRecordParams,
+  recordsAcquisitionIssues,
+  recordsCatalog,
+  rendererNativeResource,
+} from '../../data/clinicalCatalog';
 import { Page } from '../../ui/Page';
 import { ResourceCard } from '../../ui/ResourceCard';
 import { colors } from '../../ui/theme';
@@ -25,25 +31,37 @@ export default function Records() {
           {presentResource(patient).title}
         </Text>
       </View>
-      <View style={styles.section}>
-        <Text accessibilityRole="header" style={styles.sectionTitle}>
-          Clinical observations
+      {recordsCatalog.groups.map((group) => (
+        <View key={group.category} style={styles.section}>
+          <Text accessibilityRole="header" style={styles.sectionTitle}>
+            {group.label} · {group.items.length}
+          </Text>
+          {group.items.map((item) => (
+            <View key={item.key} style={styles.section}>
+              <Text selectable style={styles.description}>
+                Source: {item.identity.sourceNamespace} · {item.resourceType}/
+                {item.identity.logicalId}
+              </Text>
+              <ResourceCard
+                presentation={presentResource(rendererNativeResource(item))}
+                recordParams={catalogRecordParams(item)}
+                compact
+              />
+              {item.category === 'unclassified' ? (
+                <Text style={styles.description}>Classification: {item.reason}.</Text>
+              ) : null}
+            </View>
+          ))}
+        </View>
+      ))}
+      {!recordsCatalog.groups.length ? (
+        <Text style={styles.description}>No synthetic clinical observations are available.</Text>
+      ) : null}
+      {recordsAcquisitionIssues.map((issue) => (
+        <Text key={issue} style={styles.description}>
+          Acquisition notice: {issue}
         </Text>
-        <Text style={styles.description}>
-          Measurements recorded for the fictional patient shown above. Open a record for its
-          available time and source information.
-        </Text>
-        {demoPatientObservations.map((resource) => (
-          <ResourceCard
-            key={resourceReference(resource)}
-            presentation={presentResource(resource)}
-            compact
-          />
-        ))}
-        {!demoPatientObservations.length ? (
-          <Text style={styles.description}>No synthetic clinical observations are available.</Text>
-        ) : null}
-      </View>
+      ))}
       <View style={styles.supporting}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>
           Supporting Organization information

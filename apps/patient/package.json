@@ -11,6 +11,7 @@
   "dependencies": {
     "@expo/metro-runtime": "~57.0.17",
     "@myfhir/fhir-acquisition": "0.0.0",
+    "@myfhir/fhir-catalog": "0.0.0",
     "@myfhir/fhir-core": "0.0.0",
     "@myfhir/fhir-longitudinal": "0.0.0",
     "@myfhir/fhir-renderer": "0.0.0",

@@ -7,12 +7,26 @@ import { resources } from '@myfhir/synthetic';
 import { Page } from '../../ui/Page';
 import { BackToWallet } from '../../ui/BackToWallet';
 import { ResourceCard } from '../../ui/ResourceCard';
+import { findCatalogRecord, rendererNativeResource } from '../../data/clinicalCatalog';
 import { colors } from '../../ui/theme';
 
 export default function RecordDetails() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{
+    id: string | string[];
+    source: string | string[];
+    type: string | string[];
+    version: string | string[];
+  }>();
   const [showSource, setShowSource] = useState(false);
-  const resource = resources.find((item) => item.id === id);
+  const qualified =
+    params.source !== undefined || params.type !== undefined || params.version !== undefined;
+  const catalogItem = qualified ? findCatalogRecord(params) : undefined;
+  // Preserve old fixed-demo links; qualified links never fall back to bare IDs.
+  const resource = catalogItem
+    ? rendererNativeResource(catalogItem)
+    : qualified
+      ? undefined
+      : resources.find((item) => item.id === params.id);
   return (
     <Page>
       <BackToWallet fallback="/records" />
@@ -20,6 +34,14 @@ export default function RecordDetails() {
         <>
           <ResourceCard presentation={presentResource(resource)} />
           <View style={styles.source}>
+            {catalogItem ? (
+              <Text selectable style={styles.caption}>
+                Source: {catalogItem.identity.sourceNamespace} · Patient:{' '}
+                {catalogItem.patientContext.patientId}
+                {' · '}Version: {catalogItem.versionId ?? 'not supplied'}. Context is not
+                authorization.
+              </Text>
+            ) : null}
             <Text style={styles.caption}>Original record · {resourceReference(resource)}</Text>
             <Pressable
               accessibilityRole="button"
