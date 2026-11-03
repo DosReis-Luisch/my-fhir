@@ -168,8 +168,9 @@ All implementation uses synthetic data until the real-data gate below is satisfi
   local report/study links, metadata presentation and original source inspection.
 - **Dependencies:** Phase 4B merge `543d718`; existing source-qualified acquisition, catalog,
   renderer and record-detail navigation. No new workspace or dependency is introduced.
-- **Status:** Implemented in source on `feat/imaging-studies`, **awaiting maintainer
-  validation and GitHub review; not complete**. Basic ImagingStudy status/metadata/subject
+- **Status:** Phase 4C merged through **PR #13**, commit `3edc865`. Web/iPhone runtime
+  acceptance checks remain outstanding; no new validation results are claimed here.
+  Basic ImagingStudy status/metadata/subject
   guards preserve immutable originals. Studies use explicit resource-type classification
   evidence; radiology reports require exact unversioned `v2-0074|RAD`. LAB and Observation
   rules remain intact. Modifier-bearing studies/reports remain visible as unclassified.
@@ -183,8 +184,7 @@ All implementation uses synthetic data until the real-data gate below is satisfi
   Registered/available metadata does not prove a completed examination or available pixels.
   RAD reports retain final-status and unsupported-content fallbacks. No thumbnails, image
   data, findings interpretation or numerical imaging history is implemented.
-- **Validation / remaining work:** Run focused acquisition/catalog/renderer tests, previous
-  laboratory and weight tests, full suite, TypeScript, lint and formatting checks. Verify
+- **Validation / remaining work:** Verify
   web/iPhone Records counts, both navigation directions, unresolved links, original JSON,
   separate timestamps, accessibility and unchanged Trends. No installs, tests, builds,
   Expo or formatters were run. Manifests, lockfile and SDK 57 security findings are unchanged.
@@ -192,6 +192,35 @@ All implementation uses synthetic data until the real-data gate below is satisfi
 - **Deferred / release gates:** Authorized DICOMweb QIDO-RS/WADO-RS, external authenticated
   retrieval, large payload/caching policies, patient authorization, secure storage/privacy,
   PDF/document viewing and imaging timelines. No production or real-data approval is implied.
+
+### 4D. Recorded Conditions, problems and diagnoses
+
+- **Goal:** Two distinct fictional Condition assertions: a problem-list entry and an
+  encounter diagnosis, without establishing their medical correctness.
+- **Dependencies:** Phase 4C merge `3edc865`; native R4 types, acquisition, catalog,
+  conservative renderer and source-qualified Records/detail routes.
+- **Status:** Implemented in source on `feat/conditions`, **awaiting maintainer validation
+  and GitHub review; not complete**. Condition acquisition keeps code optional, applies
+  selected shape/subject guards and preserves original fields, identity, version and conflicts.
+  Exact unversioned condition-category coding groups problem-list-item, encounter-diagnosis
+  and other/unclassified Conditions. No diagnosis/category is inferred from text or results.
+- **Status semantics:** Clinical and verification statuses are independent exact selections
+  with frozen evidence; missing/conflicting/unsupported/versioned codings remain unavailable.
+  Provisional never becomes confirmed; confirmed means source-supplied, not independently
+  validated. Selected problem-list/entered-in-error/abatement consistency checks produce
+  explicit limitations and safe renderer fallback, not full FHIR validation or repair.
+- **Presentation / references:** Recorded date, onset and abatement stay separate source
+  strings. Unsupported choices, refuted/error, missing/conflicting metadata and modifiers
+  fall back to preserved originals. Subject/Encounter/recorder/asserter/evidence/stage
+  references remain unresolved; no Encounter is invented and no clinical evidence interpreted.
+- **Validation / remaining work:** Focused core/acquisition/catalog/renderer/application
+  tests, full suite, TypeScript, lint, `npm run format:check`, then web/iPhone grouped
+  Records/status labels, qualified links, original JSON, Back and accessibility. Preserve
+  prior laboratory/imaging relationships and ten-point weight ranges. No installs, tests,
+  builds, Expo or formatters were run. See [Condition boundary](architecture.md#recorded-conditions-problems-and-diagnoses-phase-4d).
+- **Deferred / gates:** No condition timelines, current-problem reconciliation, latest-version
+  selection, diagnosis inference, terminology APIs, clinical decision support, networking,
+  storage or authorization. Existing security findings and real-data/release gates remain.
 
 ### 5. Local FHIR R4 file and Bundle import
 

@@ -115,6 +115,27 @@ export default function RecordDetails() {
             </View>
           ) : null}
           <View style={styles.source}>
+            {catalogItem?.resourceType === 'Condition' ? (
+              <View style={styles.source}>
+                <Text accessibilityRole="header" style={styles.title}>
+                  Recorded assertion references
+                </Text>
+                <Text style={styles.caption}>
+                  References are preserved but unresolved. An encounter category or supplied
+                  reference does not establish a local Encounter, care relationship or diagnosis.
+                </Text>
+                {catalogItem.relationships.map((relationship) => (
+                  <Text key={relationship.path} selectable style={styles.caption}>
+                    {relationship.path}:{' '}
+                    {relationship.reference ?? 'Unsupported reference assertion'}
+                    {' · '}Unresolved:{' '}
+                    {relationship.resolution === 'unresolved'
+                      ? relationship.reason
+                      : 'not-supported'}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
             {catalogItem ? (
               <Text selectable style={styles.caption}>
                 Source: {catalogItem.identity.sourceNamespace} · Patient:{' '}

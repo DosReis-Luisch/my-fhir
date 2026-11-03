@@ -1,5 +1,10 @@
 import type { AcquiredResource, PatientContext } from '@myfhir/fhir-acquisition';
-import { ownField } from '@myfhir/fhir-core';
+import {
+  inspectConditionCategory,
+  inspectConditionStatuses,
+  ownField,
+  type ConditionStatusInspection,
+} from '@myfhir/fhir-core';
 import type { QuantitySeries } from '@myfhir/fhir-longitudinal';
 
 export const observationCategorySystem =
@@ -11,6 +16,9 @@ export type ClinicalCategory =
   | 'laboratory'
   | 'radiology-report'
   | 'imaging-study'
+  | 'problem-list-item'
+  | 'encounter-diagnosis'
+  | 'unclassified-condition'
   | 'unclassified';
 export type ClassificationReason =
   | 'resource-type'
@@ -69,6 +77,7 @@ export type CatalogItem = Readonly<{
   limitations: readonly string[];
   capabilities: readonly CatalogCapability[];
   relationships: readonly CatalogRelationship[];
+  conditionStatuses?: ConditionStatusInspection;
 }>;
 export type CatalogGroup = Readonly<{
   category: ClinicalCategory;
@@ -103,6 +112,9 @@ const categories = [
   'laboratory',
   'radiology-report',
   'imaging-study',
+  'problem-list-item',
+  'encounter-diagnosis',
+  'unclassified-condition',
   'unclassified',
 ] as const;
 const labels = {
@@ -111,6 +123,9 @@ const labels = {
   laboratory: 'Laboratory results',
   'radiology-report': 'Radiology reports',
   'imaging-study': 'Imaging studies',
+  'problem-list-item': 'Problem-list entries',
+  'encounter-diagnosis': 'Encounter diagnoses',
+  'unclassified-condition': 'Other / unclassified Conditions',
   unclassified: 'Other / unclassified clinical records',
 };
 function sameContext(a: PatientContext, b: PatientContext): boolean {
@@ -129,6 +144,26 @@ function text(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 function classify(record: AcquiredResource) {
+  if (record.resource.resourceType === 'Condition') {
+    const classification = inspectConditionCategory(record.resource);
+    const modified = hasModifier(record.resource);
+    const category: ClinicalCategory =
+      !modified && classification.state === 'selected'
+        ? classification.code
+        : 'unclassified-condition';
+    const reasons = {
+      missing: 'missing-category',
+      malformed: 'unsupported-category',
+      unsupported: 'unsupported-category',
+      conflicting: 'ambiguous-category',
+    } as const;
+    const reason: ClassificationReason = modified
+      ? 'modifier-extension'
+      : classification.state === 'selected'
+        ? 'explicit-category'
+        : reasons[classification.reason];
+    return { category, reason, evidence: classification.evidence };
+  }
   if (record.resource.resourceType === 'ImagingStudy') {
     const modified = hasModifier(record.resource);
     const category: ClinicalCategory = modified ? 'unclassified' : 'imaging-study';
@@ -203,6 +238,7 @@ function relationships(
       ...reportReferences(record, records, 'imagingStudy'),
     ]);
   }
+  if (record.resource.resourceType === 'Condition') return conditionRelationships(record);
   if (record.resource.resourceType !== 'Observation') return Object.freeze([]);
   const result: CatalogRelationship[] = [];
   for (const field of [
@@ -235,6 +271,44 @@ function relationships(
     });
   }
   return Object.freeze(result);
+}
+
+function conditionRelationships(record: AcquiredResource): readonly CatalogRelationship[] {
+  const assertions: CatalogRelationship[] = [];
+  function add(value: unknown, path: string) {
+    if (value === undefined) return;
+    const reference = text(ownField(value, 'reference'));
+    assertions.push(
+      Object.freeze({
+        kind: 'assertion',
+        path,
+        reference,
+        sourceContext: record.metadata.patientContext,
+        resolution: 'unresolved',
+        reason: reference ? 'resolution-not-implemented' : 'unsupported-reference',
+      }),
+    );
+  }
+  for (const key of ['subject', 'encounter', 'recorder', 'asserter']) {
+    add(ownField(record.resource, key), key);
+  }
+  for (const [key, field] of [
+    ['evidence', 'detail'],
+    ['stage', 'assessment'],
+  ] as const) {
+    const collection = ownField(record.resource, key);
+    if (!Array.isArray(collection)) continue;
+    collection.forEach((entry, index) => {
+      const references = ownField(entry, field);
+      if (references === undefined) return;
+      if (!Array.isArray(references)) add(references, `${key}[${index}].${field}`);
+      else
+        references.forEach((reference, referenceIndex) =>
+          add(reference, `${key}[${index}].${field}[${referenceIndex}]`),
+        );
+    });
+  }
+  return Object.freeze(assertions);
 }
 
 /** Two explicit report fields only; inspect ALL retained targets before context filtering. */
@@ -357,6 +431,9 @@ export function buildClinicalCatalog(
         limitations,
         capabilities: Object.freeze(capabilities),
         relationships: relationships(record, records),
+        ...(record.resource.resourceType === 'Condition'
+          ? { conditionStatuses: inspectConditionStatuses(record.resource) }
+          : {}),
       }),
     );
   }

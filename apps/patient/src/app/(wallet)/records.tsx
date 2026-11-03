@@ -47,7 +47,7 @@ export default function Records() {
                 recordParams={catalogRecordParams(item)}
                 compact
               />
-              {item.category === 'unclassified' ? (
+              {item.category === 'unclassified' || item.category === 'unclassified-condition' ? (
                 <Text style={styles.description}>Classification: {item.reason}.</Text>
               ) : null}
             </View>

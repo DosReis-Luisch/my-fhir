@@ -46,7 +46,10 @@ export function ResourceCard({
           View record →
         </Link>
       ) : null}
-      {!compact || presentation.kind === 'generic' || presentation.kind === 'imaging-study'
+      {!compact ||
+      presentation.kind === 'generic' ||
+      presentation.kind === 'imaging-study' ||
+      presentation.kind === 'condition'
         ? presentation.notices.map((notice) => (
             <Text key={notice} style={styles.notice}>
               {notice}

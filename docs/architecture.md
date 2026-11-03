@@ -655,8 +655,9 @@ web/iPhone checks remain outstanding until the maintainer records runtime eviden
 ### Imaging studies and radiology reports (Phase 4C)
 
 This slice adds a fictional ImagingStudy and radiology DiagnosticReport through the existing
-acquisition -> catalog -> local relationships -> renderer/Records flow. It is source-only,
-**awaiting maintainer validation and GitHub review; not complete**. The Phase 4B laboratory
+acquisition -> catalog -> local relationships -> renderer/Records flow. Phase 4C merged
+through **PR #13**, commit `3edc865`. Web/iPhone runtime acceptance remains unverified;
+no new validation results are claimed here. The Phase 4B laboratory
 fixtures, original three dashboard measurements, Bundle membership, Patient, ten-point
 weight history, Trends chart/ranges and longitudinal implementation remain unchanged.
 No new workspace, external dependency, endpoint, image viewer, backend, network call or
@@ -788,3 +789,114 @@ retrieval, authenticated external sources, ownership/authorization of every stud
 instance, UID-to-endpoint trust, large payload limits, cancellation/caching, protected storage,
 privacy/retention, document/PDF viewing and reviewed imaging timelines. None of these is
 implemented here; metadata availability is not permission or technical ability to fetch images.
+
+### Recorded Conditions, problems and diagnoses (Phase 4D)
+
+This source-only slice adds two fictional recorded Condition assertions to the existing
+acquisition -> catalog -> renderer -> Records/detail flow. It is **awaiting maintainer
+validation and GitHub review; not complete**. It introduces no dependencies, external
+services, terminology APIs, database, authorization, clinical decision support or timeline
+framework. The SDK 57 security assessment and real-data/release prerequisites remain
+unresolved and unchanged. No installs, tests, builds, formatters or Expo were run.
+
+`fhir-core` exports native R4 `Condition`, selected metadata guards, category/status helpers
+and readonly status/evidence types. Acquisition now accepts exactly Patient, Observation,
+DiagnosticReport, ImagingStudy and Condition. Condition.code is optional; missing code,
+clinicalStatus or verificationStatus is never repaired or invented. Supplied code/status
+concepts must be object-shaped with string text and, if supplied, arrays of coding objects
+with string selected fields. Selected dates/choice strings must be nonempty strings; supplied
+Age/Period/Range and encounter/recorder/asserter fields must be objects. Category/evidence/
+stage must be arrays of objects. These are basic guards, not comprehensive FHIR/profile or
+terminology validation. Unsupported inner metadata remains preserved rather than interpreted.
+Missing or foreign patient context, Group subjects, identifier ambiguity and unsupported
+subject-reference forms retain the existing rejection policy. Identity remains exact
+source/type/ID, with optional version separate; duplicate, conflict, immutable JSON snapshot
+and unknown-field preservation behavior is unchanged. Different revisions remain traceable;
+there is no latest-version selection or problem reconciliation.
+
+A **Condition** records a source's clinical assertion, unlike an Observation result or a
+DiagnosticReport that references results/studies. Neither a measurement nor a report causes
+a Condition to be inferred. Problem-list entries and encounter diagnoses are application
+groups selected only from exact unversioned
+`http://terminology.hl7.org/CodeSystem/condition-category` codes `problem-list-item` and
+`encounter-diagnosis`. All supplied category codings must agree and use the supported
+system/code. Duplicate agreeing evidence is retained without duplicate records; absent,
+foreign, conflicting, malformed or versioned categories and modifier-bearing records remain
+discoverable under **Other / unclassified Conditions**. Names, diagnosis codes/display,
+SNOMED assertions and Encounter references never determine grouping. A category does not
+establish that an Encounter exists or that a diagnosis is medically correct.
+
+Public helpers `inspectConditionCategory` and `inspectConditionStatuses` return disposable,
+frozen metadata without changing or freezing caller objects. Each status selection is either
+`selected` with an exact code or `unavailable` with missing/malformed/unsupported/conflicting
+reason. Evidence retains every supplied coding's path/system/code/version/display; full
+original codings, unknown fields and extensions remain in the acquired resource. Text-only
+concepts cannot select a status. Supported systems/codes are:
+
+- Clinical: `http://terminology.hl7.org/CodeSystem/condition-clinical`, with active,
+  recurrence, relapse, inactive, remission and resolved.
+- Verification: `http://terminology.hl7.org/CodeSystem/condition-ver-status`, with unconfirmed,
+  provisional, differential, confirmed, refuted and entered-in-error.
+
+All supplied codings must use the exact system, recognized code and no version, and agree.
+Unsupported modifier semantics withhold both selections while retaining coding evidence.
+Clinical and verification status are never inferred from each other. Missing clinical status
+does not imply active; provisional cannot become confirmed. Even a selected confirmed code
+is a recorded source assertion, not independent medical validation. The catalog adds optional
+`CatalogItem.conditionStatuses`, plus categories `problem-list-item`, `encounter-diagnosis`
+and `unclassified-condition`. Existing report/result/study groups and relationships are intact.
+
+Selected consistency checks corresponding to the R4 Condition problem-list/clinical-status,
+abatement/clinical-status and entered-in-error rules are explicit: a problem-list assertion
+requires supported clinical status unless verification is entered-in-error; entered-in-error
+must not carry clinicalStatus; supplied abatement requires inactive, remission or resolved.
+Questionable combinations are retained, with reason-coded limitations and generic renderer
+fallback rather than repairs. This does not evaluate all FHIR invariants, arbitrary extension
+semantics, date ordering, terminology conformance or clinical validity. The renderer additionally
+requires supported category, clinical and verification selections for its specialized summary,
+even where a missing status may be valid R4. Missing, unsupported/conflicting/versioned metadata,
+refuted/error statuses and modifier extensions produce safe fallback instead of an established-
+diagnosis card. A source-supplied active/provisional assertion can be displayed without promotion.
+
+`ResourcePresentation.kind` adds `condition`. Supported summaries use supplied code text/display
+or explicitly identify absent code. Cards say **Recorded clinical assertion**, label clinical
+and verification statuses separately as source-supplied, and keep recordedDate, onsetDateTime
+and abatementDateTime separate. Dates preserve supplied precision and timezone strings; no
+calendar validity, precise timestamp, ordering or current activity is inferred. Absence of
+abatement never establishes current active disease. Age/Period/Range/string choice forms and
+competing choices fall back; no unsupported choice is coerced into a timestamp. Narratives,
+notes and selected primitive metadata also fall back and remain plain JSON, never HTML.
+Severity, stages, body sites and evidence are not clinically interpreted or promoted into
+fields. Visible notices on compact cards explain these limits.
+
+Condition subject, encounter, recorder, asserter, evidence.detail and stage.assessment are
+retained as source-path reference assertions with unresolved reasons. There is no local
+Encounter/provider lookup, generic reference traversal, diagnosis extraction or reverse
+clinical inference. An unresolved reference asserts neither existence nor a care relationship.
+Report-to-Observation and report-to-ImagingStudy resolution remains limited to its existing
+contracts and does not extend to Condition references.
+
+The separate `samples/synthetic/src/conditions.ts` exports a declared shared dashboard
+source/patient context and two distinct fictional IDs at version 1: Alpha problem-list
+active/provisional and Beta encounter-diagnosis resolved/confirmed, with different supplied
+dates and an explicitly unresolved fictional Encounter reference. No Encounter or other
+resource is invented to complete the view. These are not versions or duplicate representations
+of one diagnosis. The app acquires them explicitly, verifies the declared shared context,
+and lists only populated groups. Each links through the existing source/type/ID/version-
+qualified record route to original JSON. Incorrect or repeated qualified parameters cannot
+fall back to bare ID lookup; legacy bare-ID routes remain restricted to original demo records.
+Condition references are visible as unresolved in details.
+
+The original three dashboard Observations, Patient, laboratory report/results, imaging
+study/report, original resources/Bundle and weight fixtures are unchanged. Conditions gain
+no numerical-history capability, and no condition events enter the longitudinal engine or
+Trends. There is no condition timeline, clinical history reconciliation or inferred diagnosis
+from sodium, potassium, weight or imaging metadata.
+
+Synthetic tests cover optional-code acquisition, structural/context guards, revisions/conflicts,
+immutable preservation, exact categories/statuses/evidence, status uncertainty and consistency,
+fallbacks for unsupported choices, unresolved references, source/patient isolation, qualified
+navigation and prior laboratory/imaging/Bundle/Trends regressions. They have not been run.
+Maintainer validation must execute focused/full tests, typecheck, lint and `npm run format:check`
+(the script already handles line endings), then web/iPhone status, navigation, JSON and
+accessibility checks. Outstanding Phase 4C and earlier runtime checks remain outstanding.

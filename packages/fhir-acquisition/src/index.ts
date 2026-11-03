@@ -1,7 +1,9 @@
 import {
   hasSupportedImagingStudyMetadata,
+  hasSupportedConditionMetadata,
   ownField,
   type DiagnosticReport,
+  type Condition,
   type ImagingStudy,
   type Observation,
   type Patient,
@@ -10,7 +12,7 @@ import { contentKey, snapshotJson } from './json';
 
 export type SourceQualifiedIdentity = Readonly<{
   sourceNamespace: string;
-  resourceType: 'Patient' | 'Observation' | 'DiagnosticReport' | 'ImagingStudy';
+  resourceType: 'Patient' | 'Observation' | 'DiagnosticReport' | 'ImagingStudy' | 'Condition';
   logicalId: string;
 }>;
 
@@ -22,7 +24,7 @@ export type DeepReadonly<T> = T extends object
   : T;
 
 export type AcquiredResource = Readonly<{
-  resource: DeepReadonly<Patient | Observation | DiagnosticReport | ImagingStudy>;
+  resource: DeepReadonly<Patient | Observation | DiagnosticReport | ImagingStudy | Condition>;
   metadata: InspectionLimits &
     Readonly<{
       identity: SourceQualifiedIdentity;
@@ -48,6 +50,7 @@ export type AcquisitionIssue =
   | 'invalid-observation-shape'
   | 'invalid-diagnostic-report-shape'
   | 'invalid-imaging-study-shape'
+  | 'invalid-condition-shape'
   | 'missing-patient-reference'
   | 'ambiguous-patient-reference'
   | 'unsupported-patient-reference'
@@ -197,7 +200,8 @@ export function createAcquisitionStore(): AcquisitionStore {
         resourceType !== 'Patient' &&
         resourceType !== 'Observation' &&
         resourceType !== 'DiagnosticReport' &&
-        resourceType !== 'ImagingStudy'
+        resourceType !== 'ImagingStudy' &&
+        resourceType !== 'Condition'
       ) {
         return reject('unsupported-resource-type');
       }
@@ -230,6 +234,9 @@ export function createAcquisitionStore(): AcquisitionStore {
         return reject('invalid-imaging-study-shape');
       }
       const issue = associationIssue(snapshot, patientId);
+      if (resourceType === 'Condition' && !hasSupportedConditionMetadata(snapshot)) {
+        return reject('invalid-condition-shape');
+      }
       if (issue) return reject(issue);
 
       const identity = Object.freeze({ sourceNamespace, resourceType, logicalId: id });
@@ -250,7 +257,7 @@ export function createAcquisitionStore(): AcquisitionStore {
       const record: AcquiredResource = Object.freeze({
         // Basic structural inspection is deliberately not full FHIR validation.
         resource: snapshot as unknown as DeepReadonly<
-          Patient | Observation | DiagnosticReport | ImagingStudy
+          Patient | Observation | DiagnosticReport | ImagingStudy | Condition
         >,
         metadata: Object.freeze({
           ...limits,

@@ -9,7 +9,8 @@ export interface PresentationField {
 
 /** Disposable view information, never a replacement clinical data model. */
 export interface ResourcePresentation {
-  readonly kind: 'patient' | 'observation' | 'diagnostic-report' | 'imaging-study' | 'generic';
+  readonly kind:
+    'patient' | 'observation' | 'diagnostic-report' | 'imaging-study' | 'condition' | 'generic';
   readonly title: string;
   readonly subtitle: string;
   readonly fields: readonly PresentationField[];
