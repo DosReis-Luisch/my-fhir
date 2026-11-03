@@ -1,5 +1,11 @@
 # Dependency security assessment — Phase 0.2
 
+The Phase 0.2 sections below preserve the **16 October 2026 SDK 55 assessment**,
+including its historical versions, decisions and validation notes. They are not the
+current dependency inventory. See the [3 November 2026 SDK 57 baseline](#sdk-57-security-baseline--3-november-2026)
+for the subsequent investigation and current reassessment prerequisites. No historical
+finding is considered fixed merely because its chain is absent from the newer snapshot.
+
 ## Snapshot and decision
 
 Audit snapshot and assessment date: **16 October 2026**. The supplied audit reports
@@ -143,3 +149,201 @@ npm audit
 
 No install, audit/fix/dedupe, tests, builds, Expo commands, Docker, .NET commands or
 automated validation were executed. No commits, pushes or issues were created.
+
+## SDK 57 security baseline — 3 November 2026
+
+### Scope, evidence and decision
+
+This dated baseline records the read-only investigation on `feat/patient-trends`.
+Installed versions included Expo **57.0.31**, Expo Router **57.0.29**, React Native
+**0.86.3**, React **19.2.3** and react-native-svg **15.15.4**. Evidence comprised
+installed package manifests/source, dependency chains, online npm audit/registry
+metadata and the upstream advisories linked below. It is not a production bundle
+analysis or exploit demonstration.
+
+- `npm audit`: **27 reported vulnerable dependency entries, including five high**
+  (also 20 moderate and two low), reproduced by the investigation's online audit.
+- `npm audit --omit=dev`: **16 entries, including five high**, supplied by the
+  maintainer; this result was not independently rerun in the investigation.
+- These are inherited package entries, not counts of independent vulnerabilities.
+  The five high entries are decoder, query-string, Router, Zod and Expo CLI, arising
+  from two high advisories. The reviewed tree has five underlying package families:
+  decoder, Zod, glob, minimatch and deepmerge; the decoder has two advisories, giving
+  six advisory IDs in this assessment.
+- The maintainer reported **234 tests passing**, plus TypeScript, ESLint, Prettier
+  and Expo Doctor passing before review. These checks were not rerun and do not
+  demonstrate remediation, exploit resistance or production readiness. This security
+  baseline does not complete or change the unfinished Phase 3C acceptance status.
+
+**Decision: unresolved findings remain; no dependency fix or override is approved by
+this assessment.** No compatible advisory-removing update was established within the
+installed SDK 57 parent constraints. This documentation update ran no npm commands,
+installation, tests, builds, Expo or proof-of-concept payloads and changed no dependency
+files or Trends implementation.
+
+`--omit=dev` follows dependency classification, not delivered application reachability.
+Expo brings development/build tooling through production-declared dependency edges.
+Conversely, tooling findings can affect developer/CI availability even when not shipped
+in a mobile bundle. Neither audit mode establishes mobile-runtime exposure.
+
+### URI decoding: high priority, application reachability unresolved
+
+- **Chain:** `expo-router@57.0.29 -> query-string@7.1.3 -> decode-uri-component@0.2.2`.
+  Parent ranges are query-string `^7.1.3` and decoder `^0.2.2`.
+- **Advisories:** [GHSA-vcc3-ghjq-m6fr](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr)
+  (moderate, through `0.4.2`, fixed in `0.5.0`) and
+  [GHSA-qr28-fpjm-wq7f](https://github.com/advisories/GHSA-qr28-fpjm-wq7f)
+  (high, through `0.5.0`, fixed in `0.5.1`). Malformed percent-encoded input can
+  cause excessive decoding work. `0.5.0` is insufficient for the newer advisory.
+- **Confirmed implementation facts:** `node_modules/query-string/index.js` calls
+  the decoder from `decode()` during default `parse()` processing. Router's bundled
+  `build/react-navigation/core/getStateFromPath.js` calls `queryString.parse()` in
+  `parseQueryParams()`. This vulnerable fallback exists in installed code.
+- **Confirmed normal path:** Under `node_modules/expo-router/`,
+  `build/getLinkingConfig.js` supplies the custom parser through `build/ExpoRoot.js`
+  and linking context. `build/fork/getStateFromPath-forks.js::parseQueryParams()`
+  uses `URLSearchParams` through `build/utils/url.js`. Observed Router
+  `queryString.stringify()` calls do not invoke the vulnerable decoder.
+- **Inferred exposure / unknown runtime reachability:** Navigation helpers retain
+  the core-parser fallback when a custom parser is absent. The normal path inspected
+  uses the custom parser; selection of the vulnerable fallback by actual application
+  navigation/deep links remains unproven. No production bundle tracing or exploit
+  testing established attacker reachability. Failure to find another call is not proof
+  of safety.
+- **Compatibility and action:** Decoder `0.5.1` is outside the parent's range and
+  uses an ESM default export, while query-string 7 expects a directly callable CommonJS
+  `require()`. Query-string 10 removes the dependency but changes major version,
+  module/API expectations and Node requirements. Neither blanket override is approved.
+  Monitor/request an SDK 57-compatible Router backport or dependency removal.
+  Any proposed URL size limits must precede parsing at applicable native/web ingress;
+  record-detail or screen parameter checks occur too late and are not decoder mitigation.
+- **Minimum candidate validation:** Trace release-bundle parser selection; verify
+  cold/warm links and navigation on web/native, malformed encoding, Unicode, duplicate
+  parameters and oversized input, plus CommonJS/ESM behavior.
+
+### Zod: high, confirmed Expo CLI plugin-output validation
+
+- **Chain:** `expo@57.0.31 -> @expo/cli@57.0.32 -> zod@3.25.76`; CLI requests
+  `^3.25.76`.
+- **Advisory:** [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5)
+  affects versions below `4.6.6`. Excessive array validation can exhaust resources.
+  The fix improves bounded-array rejection; unbounded schemas still require practical
+  limits, as described in the [upstream discussion](https://github.com/colinhacks/zod/issues/6475).
+- **Confirmed implementation facts:** Under
+  `node_modules/expo/node_modules/@expo/cli/build/src/start/server/`,
+  `DevToolsPlugin.schema.js` defines unbounded output arrays;
+  `DevToolsPluginCliExtensionResults.js::parseOutputText()` performs `JSON.parse()`
+  then `safeParse()`. `MCPDevToolsPluginCLIExtensions.js` also validates plugin results.
+  The output ceiling uses V8's maximum string length rather than a practical small
+  payload bound. These are tooling paths, not established mobile-runtime calls.
+- **Inferred exposure:** Availability risk exists if an attacker can influence plugin
+  metadata/output or data processed by enabled plugins. Generated MCP input schemas
+  inspected use scalar parameters; no arbitrary incoming-array service path or
+  unauthenticated remote exploitability was established. Enabled services, bindings,
+  access controls and attacker influence remain exposure questions.
+- **Compatibility and action:** Zod `4.6.6` supports CommonJS and ESM, but exceeds
+  the CLI's major range and requires API/schema compatibility review. The inspected
+  latest CLI 57 still requests Zod 3. No global Zod 4 override is approved. Monitor an
+  upstream migration/backport; separately consider practical byte/cardinality bounds
+  before JSON/schema processing where untrusted plugin output is possible.
+- **Minimum candidate validation:** Plugin/MCP schema contracts, oversized/invalid
+  output handling, bounded resource use and CLI compatibility. A version bump alone
+  does not establish adequate input limits.
+
+### Glob, minimatch and ESLint: tooling exposure requires call-path review
+
+- **Chains:** Expo CLI/config/fingerprint use `glob@13.0.6 -> minimatch@10.2.6`.
+  `@expo/fingerprint@0.20.14` and TypeScript-ESLint `8.71.2` also use minimatch 10;
+  ESLint `9.39.5` and its configuration dependencies resolve minimatch `3.1.5`.
+- **Advisories:** [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4)
+  covers glob `9` through `14.0.1`, fixed in `14.0.2`, for abort-related recursion/resource
+  exhaustion. [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249)
+  covers minimatch below `11.0.1`, fixed in `11.0.1`, for excessive pattern expansion.
+- **Confirmed implementation facts:** `node_modules/glob/dist/commonjs/glob.js`
+  forces `optimizationLevel: 2`, selecting the minimatch expansion mode of concern.
+  `glob/dist/commonjs/walker.js` contains affected abort handling. Expo CLI's
+  `build/src/utils/glob.js::anyMatchAsync()` aborts a glob stream after a match, but
+  no caller beyond its definition was found: execution in the current workflow is
+  unproven. Expo config and route discovery use glob with project/tooling patterns.
+- **Inferred exposure / limits:** Attacker control of patterns, configuration or abort
+  paths was not established. Fingerprint's direct minimatch call and TypeScript-ESLint's
+  `typescript-estree/dist/useProgramFromProjectService.js` do not select level 2;
+  current ESLint configuration does not enable that project-service path. Minimatch 3
+  lacks the particular level-2 preprocessing implementation; its inclusion in the broad
+  advisory range needs clarification, not dismissal of the finding.
+- **Compatibility and action:** Glob parents request `^13.0.0`; minimatch parents
+  request 10.x or 3.x. Patched glob 14/minimatch 11 support CommonJS and ESM, but
+  exceed those ranges and change dependency/API internals. No blanket major override
+  is approved. Monitor coordinated upstream upgrades/backports. The inspected compatible
+  TypeScript-ESLint `8.72.1` still requests minimatch `^10.2.2`; upgrading ESLint to the
+  inspected 10.x release also retains minimatch 10, so neither establishes remediation.
+- **Minimum candidate validation:** Windows paths, ignores, braces/extglobs, symlinks,
+  Expo route/asset discovery, configuration/native generation and cancellation behavior;
+  actual flat-config linting and TypeScript compatibility for lint-tool changes.
+
+### Deepmerge: low, configuration/plugin merge boundary
+
+- **Chain:** `expo -> @expo/config@57.0.10 -> deepmerge@4.3.1`; config requests
+  `^4.3.1`.
+- **Advisory:** [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4)
+  covers `4.2.0` through `4.3.1`, with no published patched release at review time.
+  Unsafe merges can affect the returned object's prototype; this is not evidence of
+  global `Object.prototype` modification in the observed path.
+- **Confirmed implementation facts:** `node_modules/@expo/config/build/Config.js`
+  uses deepmerge in `mergeConfigModifications()` and plugin-property merging.
+  No mobile-runtime or exposed-service input flow was established.
+- **Inferred exposure and action:** Untrusted configuration/plugin objects could cross
+  this boundary. Monitor upstream; if such objects are accepted, separately review
+  dangerous-key and own-property handling. No patched override target was established.
+- **Minimum candidate validation:** Existing config/plugin merge semantics, dangerous-key
+  regression cases and applicable Expo configuration generation.
+
+### Fix policy, existing boundaries and monitoring
+
+The maintainer's prior `npm audit fix --dry-run` did not establish a compatible fix for
+the main Expo chains. The read-only investigation did not run audit fix or rerun its
+dry-run, and the complete earlier plan was not available for comparison. Online audit
+suggestions included incompatible major changes/downgrades; `fixAvailable: true` is
+not proof of an SDK-compatible solution. No advisory-removing non-forced fix was
+verified. Incidental compatible updates must be assessed by remaining advisory IDs and
+resolved chains, not by the number of packages updated.
+
+Automatic fixes, forced framework changes, incompatible majors and blanket overrides
+are not approved by this baseline. Candidate parent-scoped fixes require separate review
+of semver constraints, module shape and APIs, lockfile diff and SDK/native compatibility.
+Published upstream fixes are not proof they can be substituted safely into this tree.
+
+Existing risk-reducing boundaries are synthetic-only data and the absence of implemented
+external acquisition/authentication connections, plus the normal Router parser described
+above. These are limited facts, not fixes or a security boundary against malicious links.
+No pre-parser URL cap or practical plugin-output cap was established. Trusted tooling
+inputs, restricted development-service access and new input caps are controls to verify
+or implement separately, not controls claimed implemented by this document. Clinical
+source/patient consistency checks do not mitigate dependency parsing vulnerabilities.
+
+Monitor Expo SDK 57 Router/CLI/config/fingerprint and their affected upstream packages.
+Recheck advisory ranges, newly published backports, plugin/service enablement, URL parser
+selection and release-bundle inclusion when dependencies or ingress paths change.
+
+### Release and external-connection prerequisites
+
+Before enabling external connections (including a synthetic sandbox), using real patient
+data or distributing a production release:
+
+1. Refresh full and omit-dev audits against the exact candidate lockfile and current
+   advisories. Preserve dated counts and chain evidence; do not overwrite this history
+   or infer remediation from a changed scanner count alone.
+2. Establish delivered web/native bundle reachability and parser selection. Review all
+   external URL/deep-link ingress, input bounds and fallback paths. Resolve or explicitly
+   disposition the unknown decoder exposure before accepting untrusted links.
+3. Review enabled CLI/plugin/MCP services, binding/access controls, untrusted output and
+   configuration/pattern inputs, including CI. Separate confirmed calls from attacker
+   reachability and document remaining unknowns.
+4. For each candidate fix, review parent/module/API compatibility and the complete
+   manifest/lockfile diff; run focused security-boundary regressions and applicable
+   tests, typecheck, lint, formatting, Expo compatibility/Doctor, web/native navigation
+   and tooling checks. The family-specific minimum checks above remain prerequisites.
+5. Record a maintainer release decision for every unresolved advisory and unknown
+   exposure, with mitigation/evidence and reassessment ownership. This baseline does
+   not authorize production distribution or real-data/external integration; the backlog's
+   identity, authorization, privacy and data-handling gates also remain in force.

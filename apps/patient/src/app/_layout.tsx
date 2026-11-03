@@ -12,6 +12,7 @@ export default function RootLayout() {
           options={{ title: 'MyFHIR | Profile inspection demo' }}
         />
         <Stack.Screen name="record/[id]" options={{ title: 'MyFHIR | Record' }} />
+        <Stack.Screen name="trend-record/[id]" options={{ title: 'MyFHIR | Trend record' }} />
       </Stack>
     </>
   );

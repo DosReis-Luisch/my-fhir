@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { colors } from './theme';
 
 /** Use real navigation history when available, including the originating wallet tab. */
-export function BackToWallet({ fallback }: { fallback: '/records' | '/me' }) {
+export function BackToWallet({ fallback }: { fallback: '/records' | '/me' | '/trends' }) {
   const router = useRouter();
   return (
     <Pressable

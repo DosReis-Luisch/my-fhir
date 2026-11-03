@@ -197,7 +197,8 @@ The synthetic workspace owns one fictional Patient, three Observations (includin
 blood-pressure component example), and one Organization, also exported as a native
 collection Bundle. Overview observations are selected by the exact local Patient
 reference. There is no general reference resolver or remote input boundary yet. The independent
-Phase 3A synthetic acquisition package below is not wired into the wallet.
+Phase 3A synthetic acquisition package below is used by the separate Phase 3C Trends source;
+the original dashboard selector and Bundle remain unchanged.
 Detail routes use locally unique fixture IDs; before introducing remote/multi-type
 records they must use resource type plus ID and server context to avoid collisions.
 
@@ -282,7 +283,7 @@ TypeScript and lint passed, and formatting passed with `--end-of-line auto`. The
 apply to the Phase 3A baseline; they are not validation of Phase 3B. The existing workspace
 and test globs discover these packages without config changes.
 
-### Longitudinal coded Quantity analysis (Phase 3B, validation pending)
+### Longitudinal coded Quantity analysis (Phase 3B)
 
 `packages/fhir-longitudinal` is a separate private portable workspace depending only on
 `@myfhir/fhir-acquisition` and `@myfhir/fhir-core`. Analysis stays separate from acquisition
@@ -346,9 +347,75 @@ of input order. No range, normality, diagnosis, treatment or clinical-comparabil
 is produced. Exported selection/result types include `CodingSelection`, `QuantitySeriesRequest`,
 `MeasurementPoint`, `ExclusionReason`, `ObservationExclusion` and `QuantitySeries`.
 
-Phase 3B source and synthetic tests are written but **unvalidated**. The new workspace needs
-maintainer installation/lockfile regeneration before validation. No install, tests, build,
-formatter or Expo was run in this milestone; `package-lock.json` was left unchanged.
+Maintainer-reported Phase 3B results: **224 tests passed**, TypeScript and ESLint passed,
+and Prettier passed with `--end-of-line auto`. Phase 3B was merged via PR #9. These are
+baseline results, not validation of Phase 3C.
+
+### First body-weight Trends screen (Phase 3C, validation pending)
+
+The wallet now includes `/trends` alongside Home, Records and Me. It shows the existing
+fictional Alex Morgan context, Body weight in kg, range controls, a responsive line chart
+and an oldest-first accessible list with exact supplied timestamps and original-record links.
+Fictional-data and non-interpretation notices remain visible. The existing logo/palette,
+dashboard measurements, demo Bundle and `/record/[id]` lookup are unchanged.
+
+Ten hand-authored R4 Observations in `samples/synthetic/src/weightHistory.ts` span January
+through October 2026. They have distinct logical IDs, version `1`, final status, LOINC
+`29463-7`, UCUM `kg` and complete offset-qualified clinical times. They are exported
+separately with the explicit fictional source/patient context and are not added to the
+original `resources` or Bundle. No real-provider provenance or identity verification is implied.
+
+`apps/patient/src/data/weightTrend.ts` acquires those resources with `createAcquisitionStore`,
+then calls `analyzeQuantitySeries` for that exact source/patient/coding/unit. Chart and list
+consume its same immutable measurement points and acquired record references. Acquisition
+failures and engine exclusions are reported as preparation notices, not silently interpreted
+in UI. No patient matching, unit comparability, clinical grouping or version selection is
+duplicated in the application. The existing engines are unchanged.
+
+`selectTrendRange` is only a presentation window over engine-ordered points. 1M/6M/1Y
+subtract one/six/twelve UTC calendar months from the latest included clinical instant, clamp
+the day to the destination month's last day and include both endpoints. All starts at the
+first included measurement. No device current time is consulted. Points retain their exact
+values, timestamps and references across range switches. If the engine has no eligible
+points, every range is empty with an explicit message. Nonempty input necessarily includes
+its latest point in each range; the supplied 1M example has one dot rather than an invented
+line/history. Calendar windows and graph UTC axis labels do not rewrite source timestamps.
+
+`WeightTrendChart` uses `react-native-svg` **15.15.4**, the version specified by the installed
+Expo **57.0.30** `bundledNativeModules.json`. Only the app manifest adds this dependency
+and its direct acquisition/longitudinal workspace dependencies. No large chart framework or
+animation system is introduced; installation and lockfile regeneration are maintainer steps.
+The pure `trendChartGeometry` maps actual elapsed clinical time to horizontal position, so
+unequal time gaps are unequal distances. The kg scale starts at zero and has a stable upper
+bound of at least 100 across ranges, derived from the full series. Straight connectors are
+visual guides between actual dots, not estimated/interpolated measurements. There are no
+normality bands, trends-as-diagnoses or smoothing. Container layout sets chart width on web
+and native. A labelled accessible chart summary is supplemented by scalable text/list links;
+the SVG is not the only way to read measurements.
+
+`/trend-record/[id]?source=...&type=Observation&version=...` is a separate narrow synthetic
+detail route. `trendRecordParams` supplies the exact source/type/logical-ID/version tuple;
+`findTrendPoint` resolves only that tuple within the known fictional source/patient's
+engine-selected points. Missing/ambiguous query parameters, wrong source/type/version and
+unknown IDs produce a missing-record message. There is no bare-ID fallback, URL fetching,
+cross-source identity inference or reuse of the original demo lookup. The detail screen
+shows the exact engine value/time, acquired source identity and selectable original FHIR JSON,
+without cloning into a clinical DTO. Back uses real history or falls back to Trends on direct
+entry. Context checking and local lookup are not authorization.
+
+Pure application preparation/range/lookup/geometry cases are in
+`packages/fhir-longitudinal/tests/patientTrends.test.ts`, using the existing Node test glob.
+Only this test file imports the pure application helpers; portable engine production code
+does not import the app, samples, React or SVG. Tests cover engine derivation, original-demo
+separation, month boundaries, offsets, empty results, source collisions, unchanged originals
+and unequal temporal spacing. No UI runner or screenshot harness was added.
+
+Phase 3C remains **pending maintainer validation**, including dependency installation,
+focused/full tests, typecheck/lint/format checks, web rendering, iPhone layout, VoiceOver,
+range switching and navigation/deep-link smoke checks. No install, tests, build, formatter,
+Expo or native launch was run during implementation. The SVG has no zoom/tooltips or
+interactive point selection; exact measurements are in the list. This source-only milestone
+does not establish native-client compatibility, full FHIR validation or production privacy.
 
 No authentication, network access, database, server, persistence, cloud services, FHIRPath,
 terminology lookup, full profile resolution, or clinical decision support is implemented.
