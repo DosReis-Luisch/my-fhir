@@ -351,7 +351,7 @@ Maintainer-reported Phase 3B results: **224 tests passed**, TypeScript and ESLin
 and Prettier passed with `--end-of-line auto`. Phase 3B was merged via PR #9. These are
 baseline results, not validation of Phase 3C.
 
-### First body-weight Trends screen (Phase 3C, validation pending)
+### First body-weight Trends screen (Phase 3C, merged; runtime verification pending)
 
 The wallet now includes `/trends` alongside Home, Records and Me. It shows the existing
 fictional Alex Morgan context, Body weight in kg, range controls, a responsive line chart
@@ -382,9 +382,9 @@ its latest point in each range; the supplied 1M example has one dot rather than 
 line/history. Calendar windows and graph UTC axis labels do not rewrite source timestamps.
 
 `WeightTrendChart` uses `react-native-svg` **15.15.4**, the version specified by the installed
-Expo **57.0.30** `bundledNativeModules.json`. Only the app manifest adds this dependency
-and its direct acquisition/longitudinal workspace dependencies. No large chart framework or
-animation system is introduced; installation and lockfile regeneration are maintainer steps.
+Expo **57.0.30** compatibility map used during implementation; the merged baseline retains
+that SVG version with Expo 57.0.31 and Router 57.0.29 in the lockfile. No large chart
+framework or animation system is introduced.
 The pure `trendChartGeometry` maps actual elapsed clinical time to horizontal position, so
 unequal time gaps are unequal distances. The kg scale starts at zero and has a stable upper
 bound of at least 100 across ranges, derived from the full series. Straight connectors are
@@ -405,18 +405,126 @@ entry. Context checking and local lookup are not authorization.
 
 Pure application preparation/range/lookup/geometry cases are in
 `packages/fhir-longitudinal/tests/patientTrends.test.ts`, using the existing Node test glob.
-Only this test file imports the pure application helpers; portable engine production code
-does not import the app, samples, React or SVG. Tests cover engine derivation, original-demo
+These tests import the pure application helpers; portable engine production code does not
+import the app, samples, React or SVG. Tests cover engine derivation, original-demo
 separation, month boundaries, offsets, empty results, source collisions, unchanged originals
 and unequal temporal spacing. No UI runner or screenshot harness was added.
 
-Phase 3C remains **pending maintainer validation**, including dependency installation,
-focused/full tests, typecheck/lint/format checks, web rendering, iPhone layout, VoiceOver,
-range switching and navigation/deep-link smoke checks. No install, tests, build, formatter,
-Expo or native launch was run during implementation. The SVG has no zoom/tooltips or
+Phase 3C merged through **PR #10**, commit `15408b1`. The maintainer previously reported
+234 tests passing plus TypeScript, ESLint, Prettier and Expo Doctor passing; these are
+historical results, not Phase 4A validation. Web/iPhone runtime verification remains
+outstanding: layout, VoiceOver, range switching, navigation/direct links and absence of
+the web SVG attribute warning. The merged SDK baseline is Expo 57.0.31, Router 57.0.29
+and SVG 15.15.4. No checks were rerun in Phase 4A. The SVG has no zoom/tooltips or
 interactive point selection; exact measurements are in the list. This source-only milestone
 does not establish native-client compatibility, full FHIR validation or production privacy.
 
 No authentication, network access, database, server, persistence, cloud services, FHIRPath,
 terminology lookup, full profile resolution, or clinical decision support is implemented.
 Native distribution and app-store metadata are future work. No .NET project is present.
+
+### Clinical catalog and organization (Phase 4A)
+
+`packages/fhir-catalog` is a private portable TypeScript workspace for reuse across web,
+mobile and later adapters. It depends on acquisition/core and uses longitudinal result
+types; it does not import React, Expo, Node/browser APIs, sample data or the renderer.
+There are no external runtime dependencies, network calls, terminology lookups, storage,
+authentication or plugin framework. Acquisition, renderer and longitudinal implementation
+code is unchanged. Workspace installation and lockfile regeneration are maintainer steps;
+Phase 4A is source-only and **awaiting validation**, not complete.
+
+`buildClinicalCatalog(records, patientContext, histories = [])` accepts immutable acquired
+Patient/Observation snapshots and one explicit source-qualified Patient context. It returns
+a frozen `ClinicalCatalog`: items, nonempty clinical groups, explicit out-of-context
+exclusions, history sections, limitations, `validation: 'not-performed'` and
+`authorization: 'not-checked'`. `store.records()` is not an authorized query; catalog
+filtering checks source/patient consistency only. Invalid context throws `RangeError`.
+The caller must provide acquisition snapshots, not arbitrary JSON or fabricated descriptors.
+
+Each `CatalogItem` retains the exact `AcquiredResource` and native resource references,
+identity, separate available version, patient context, resource type, category, reason,
+classification evidence paths/system/code/version, capabilities, limitations and explicit
+reference assertions. No clinical value is copied into a parallel model. All newly created
+objects/arrays are frozen; native resources remain the already frozen acquisition snapshots.
+Repeated references to the same snapshot are listed once. Different versions are retained,
+never ranked or selected as latest; independent equal-valued events are not deduplicated.
+Items sort lexically by encoded source/type/ID/version tuple, not by clinical date or display
+label. Groups have fixed vital-signs, laboratory, unclassified order and omit empty groups.
+Records from separate stores with conflicting identity/version content must be reconciled
+at acquisition; this catalog is not a second conflict resolver.
+
+The distinctions are deliberate:
+
+- **FHIR resource type** is the native shape, not the clinical category. Patient remains
+  a context descriptor, not a clinical group entry. Organization remains existing supporting
+  demo context outside acquisition/catalog, not a patient record or care-relationship claim.
+- **Clinical category** is disposable application organization. Only Observation category
+  coding with exact system `http://terminology.hl7.org/CodeSystem/observation-category`
+  and code `vital-signs` or `laboratory` is supported. All supplied category concepts/codings
+  must be supported, unversioned and agree. Repeated agreeing codings are retained as
+  evidence without duplicating the record. Both recognized codes, mixed conflicting codes,
+  unsupported/foreign/versioned/malformed coding, text-only or missing categories become
+  unclassified with an explicit reason. Nonempty/malformed modifier extensions anywhere
+  also force unclassified. Display text, names, IDs and filenames never determine category.
+  Category is not a status/value safety check; existing renderer fallbacks still apply.
+- **Source-qualified identity** is source/type/logical ID with version separate. Matching
+  names, codes or bare IDs never reconcile patients/sources. Every catalog has one context;
+  multi-context UI and authorization remain future work.
+- **Resource relationships** describe supplied references, not inferred links. The current
+  Observation slice captures subject, derivedFrom, hasMember, basedOn, partOf, specimen,
+  encounter, device, performer and focus paths, raw reference strings and source/patient
+  context. Every assertion is unresolved; identifier-only/malformed assertions explicitly
+  report unsupported-reference and remain intact in the original. Even a locally present
+  target is not traversed. No date/value/display matching creates a relationship.
+- **Numerical trends** require existing longitudinal selection, not category membership.
+  Optional `QuantitySeries` evidence grants numerical-history capability only to the exact
+  same acquired object references in same-context engine points. No analysis rules are
+  duplicated. A valid uncategorized weight point can have numerical-history capability;
+  a laboratory or vital-sign category alone cannot grant it. The typed engine result is
+  trusted input, not a security credential or runtime validation of caller-supplied series.
+- **Non-numerical timelines** for reports, conditions and imaging are planned, not empty
+  implemented histories or numerical series. The catalog supplies a planned history section
+  with no items. No timeline dates are invented from partial/ambiguous clinical time.
+- **Clinical presentation** remains the conservative renderer's responsibility, distinct
+  from classification and from full FHIR/profile/terminology/clinical validation. Presentation
+  capability means the renderer can provide its existing specialized or generic fallback,
+  never that specialized interpretation is safe for every classified record.
+
+`apps/patient/src/data/clinicalCatalog.ts` is the shared application bridge. It acquires the
+existing Patient and three dashboard Observations in a fixed synthetic dashboard namespace,
+reports acquisition issues, and builds Records groups. It separately catalogs the existing
+weight engine's point/exclusion records with that engine's history evidence. The two sources
+are not merged despite their common fictional Patient ID. No fixtures, original Bundle
+membership, dashboard values, weight preparation/ranges or SVG/chart geometry are changed.
+Laboratory classification is exercised by separate fictional test resources; no additional
+record is invented in the UI. The bridge's documented R4 type assertion accommodates the
+legacy read-only renderer's mutable TypeScript signature while passing the frozen snapshot
+itself; renderer behavior and source preservation are covered by adapter tests.
+
+Records shows catalog section headings/counts and original-record links with source, type,
+ID and optional version. The detail route performs an exact fixed-context lookup for qualified
+links and never falls back to a bare ID if qualification is wrong/ambiguous. Existing bare-ID
+links remain restricted to the original fixed demo resources for Home/supporting context.
+This legacy path is not a remote/multi-source lookup. Trends adds catalog-owned numerical
+and planned-other-history section labels; its actual weight series/list/chart still comes
+exclusively from the unchanged longitudinal engine.
+
+Additional categories are design direction: imaging/examinations, reports/documents,
+conditions/diagnoses, medications, immunizations and procedures. Acquisition still rejects
+DiagnosticReport, ImagingStudy, DocumentReference, Condition and every type other than
+Patient/Observation. A future resolver must use explicit same-source and patient context,
+type/ID and requested version, preserve missing/ambiguous targets, review shared/non-patient
+and contained/absolute-reference policies, and enforce authorization separately before any
+fetch. DiagnosticReport results may reference multiple Observations; they are not a single
+measurement. ImagingStudy metadata does not contain image pixels. Imaging/DICOM content
+retrieval, protected endpoints, supported formats/viewers, authorization, privacy and large
+payload handling require later reviewed adapters. No DICOM viewer, imaging retrieval,
+laboratory interpretation or universal FHIR classification exists in this milestone.
+
+Focused tests in `packages/fhir-catalog/tests` cover classification, ambiguity, unsupported
+forms, isolation, versions, immutable output, preservation, deterministic groups, unresolved
+relationships, engine capability evidence and shared Records/Trends adapters. They have not
+been executed. Maintainer validation must register the workspace, regenerate/review the
+lockfile, run focused/full tests and TypeScript/lint/format checks, verify Expo compatibility,
+then exercise web/iPhone Records/details and unchanged Trends/ranges/accessibility. The
+November 3 SDK 57 dependency-security baseline and its release prerequisites remain in force.

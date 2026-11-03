@@ -6,9 +6,11 @@ import { colors } from './theme';
 export function ResourceCard({
   presentation,
   compact = false,
+  recordParams,
 }: {
   presentation: ResourcePresentation;
   compact?: boolean;
+  recordParams?: { id: string; source: string; type: string; version?: string };
 }) {
   const fields = compact
     ? presentation.fields.filter(
@@ -33,7 +35,10 @@ export function ResourceCard({
       </View>
       {compact && presentation.source.id ? (
         <Link
-          href={{ pathname: '/record/[id]', params: { id: presentation.source.id } }}
+          href={{
+            pathname: '/record/[id]',
+            params: recordParams ?? { id: presentation.source.id },
+          }}
           style={styles.link}
           accessibilityLabel={`View ${presentation.title} record`}
         >
