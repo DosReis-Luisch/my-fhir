@@ -1,9 +1,16 @@
-import { ownField, type DiagnosticReport, type Observation, type Patient } from '@myfhir/fhir-core';
+import {
+  hasSupportedImagingStudyMetadata,
+  ownField,
+  type DiagnosticReport,
+  type ImagingStudy,
+  type Observation,
+  type Patient,
+} from '@myfhir/fhir-core';
 import { contentKey, snapshotJson } from './json';
 
 export type SourceQualifiedIdentity = Readonly<{
   sourceNamespace: string;
-  resourceType: 'Patient' | 'Observation' | 'DiagnosticReport';
+  resourceType: 'Patient' | 'Observation' | 'DiagnosticReport' | 'ImagingStudy';
   logicalId: string;
 }>;
 
@@ -15,7 +22,7 @@ export type DeepReadonly<T> = T extends object
   : T;
 
 export type AcquiredResource = Readonly<{
-  resource: DeepReadonly<Patient | Observation | DiagnosticReport>;
+  resource: DeepReadonly<Patient | Observation | DiagnosticReport | ImagingStudy>;
   metadata: InspectionLimits &
     Readonly<{
       identity: SourceQualifiedIdentity;
@@ -40,6 +47,7 @@ export type AcquisitionIssue =
   | 'invalid-version'
   | 'invalid-observation-shape'
   | 'invalid-diagnostic-report-shape'
+  | 'invalid-imaging-study-shape'
   | 'missing-patient-reference'
   | 'ambiguous-patient-reference'
   | 'unsupported-patient-reference'
@@ -90,6 +98,13 @@ const diagnosticReportStatuses = new Set([
   'amended',
   'corrected',
   'appended',
+  'cancelled',
+  'entered-in-error',
+  'unknown',
+]);
+const imagingStudyStatuses = new Set([
+  'registered',
+  'available',
   'cancelled',
   'entered-in-error',
   'unknown',
@@ -181,7 +196,8 @@ export function createAcquisitionStore(): AcquisitionStore {
       if (
         resourceType !== 'Patient' &&
         resourceType !== 'Observation' &&
-        resourceType !== 'DiagnosticReport'
+        resourceType !== 'DiagnosticReport' &&
+        resourceType !== 'ImagingStudy'
       ) {
         return reject('unsupported-resource-type');
       }
@@ -205,6 +221,14 @@ export function createAcquisitionStore(): AcquisitionStore {
       ) {
         return reject('invalid-diagnostic-report-shape');
       }
+      if (
+        resourceType === 'ImagingStudy' &&
+        (typeof snapshot.status !== 'string' ||
+          !imagingStudyStatuses.has(snapshot.status) ||
+          !hasSupportedImagingStudyMetadata(snapshot))
+      ) {
+        return reject('invalid-imaging-study-shape');
+      }
       const issue = associationIssue(snapshot, patientId);
       if (issue) return reject(issue);
 
@@ -225,7 +249,9 @@ export function createAcquisitionStore(): AcquisitionStore {
       }
       const record: AcquiredResource = Object.freeze({
         // Basic structural inspection is deliberately not full FHIR validation.
-        resource: snapshot as unknown as DeepReadonly<Patient | Observation | DiagnosticReport>,
+        resource: snapshot as unknown as DeepReadonly<
+          Patient | Observation | DiagnosticReport | ImagingStudy
+        >,
         metadata: Object.freeze({
           ...limits,
           identity,

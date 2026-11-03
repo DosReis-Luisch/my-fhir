@@ -2,6 +2,9 @@ import { createAcquisitionStore } from '@myfhir/fhir-acquisition';
 import { buildClinicalCatalog, type CatalogItem } from '@myfhir/fhir-catalog';
 import type { FhirResource } from '@myfhir/fhir-core';
 import {
+  imagingContext,
+  imagingStudy,
+  radiologyReport,
   laboratoryContext,
   laboratoryObservations,
   laboratoryReport,
@@ -25,8 +28,44 @@ for (const resource of [patient, ...observations, laboratoryReport, ...laborator
     issues.push(`${resource.id}: ${result.reason}`);
   }
 }
+// Explicit context assertion: never relabel resources from another declared source/patient.
+if (
+  imagingContext.sourceNamespace !== recordsContext.sourceNamespace ||
+  imagingContext.patientId !== recordsContext.patientId
+) {
+  throw new Error('Synthetic imaging context must match the explicitly shared demo context.');
+}
+for (const resource of [imagingStudy, radiologyReport]) {
+  const result = store.acquire({
+    sourceNamespace: imagingContext.sourceNamespace,
+    patientContext: imagingContext,
+    resource,
+  });
+  if (result.status === 'rejected' || result.status === 'conflict') {
+    issues.push(`${resource.id}: ${result.reason}`);
+  }
+}
 export const recordsAcquisitionIssues = Object.freeze(issues);
 export const recordsCatalog = buildClinicalCatalog(store.records(), recordsContext);
+
+/** Inbound display links reuse resolved catalog evidence; this performs no new reference resolution. */
+export function reportsForStudy(study: CatalogItem): readonly CatalogItem[] {
+  if (study.resourceType !== 'ImagingStudy' || !recordsCatalog.items.includes(study)) {
+    return Object.freeze([]);
+  }
+  return Object.freeze(
+    recordsCatalog.items.filter(
+      (report) =>
+        report.resourceType === 'DiagnosticReport' &&
+        report.relationships.some(
+          (relationship) =>
+            relationship.kind === 'report-imaging-study' &&
+            relationship.resolution === 'resolved' &&
+            relationship.target === study.record,
+        ),
+    ),
+  );
+}
 
 // Use exact engine references, including excluded records. Never reclassify numerical eligibility.
 export const trendsCatalog = buildClinicalCatalog(

@@ -137,9 +137,9 @@ All implementation uses synthetic data until the real-data gate below is satisfi
   with exact local source/patient-scoped links and original FHIR inspection.
 - **Dependencies:** Merged Phase 4A; native R4 DiagnosticReport export, acquisition guards,
   catalog classification/resolution and conservative renderer metadata presentation.
-- **Status:** Implemented in source on `feat/laboratory-reports`, **awaiting maintainer
-  validation and GitHub code review; not complete**. Acquisition now supports only Patient,
-  Observation and DiagnosticReport. A report uses exact unversioned `v2-0074|LAB` category
+- **Status:** Phase 4B merged through **PR #12**, commit `543d718`. Web/iPhone runtime
+  acceptance remains unverified; merge does not establish device acceptance. The Phase 4B
+  boundary supports Patient, Observation and DiagnosticReport. A report uses exact unversioned `v2-0074|LAB` category
   coding, independently of Observation laboratory coding. Reports, results and unclassified
   records have separate populated groups. No report category is inherited by its results.
 - **Relationships:** Only direct `DiagnosticReport.result` references of the exact form
@@ -151,15 +151,47 @@ All implementation uses synthetic data until the real-data gate below is satisfi
   supplied clinical/issued times. Other statuses, modifier extensions and unsupported
   narratives/conclusions/attachments/time forms fall back. Result links are supplied-reference
   navigation, not approval of the report or clinical interpretation of its results.
-- **Validation / remaining work:** Run focused acquisition/catalog/renderer tests, existing
-  weight-series tests, full suite, TypeScript, lint, formatting and manual web/iPhone checks.
-  No installs, tests, builds, Expo or formatters were run for this source-only implementation.
+- **Validation / remaining work:** Complete web/iPhone grouped Records, report/result
+  navigation, original JSON, accessibility and unchanged Trends checks. No new automated
+  validation results are claimed here. No installs, tests, builds, Expo or formatters were
+  run during Phase 4B implementation.
   No manifests, dependency versions, lockfile or security assessment were changed.
   See [Phase 4B boundary](architecture.md#laboratory-results-and-diagnosticreports-phase-4b).
 - **Deferred:** Longitudinal laboratory histories; reference ranges/normality and safe clinical
-  interpretation; presentedForm/PDF; ImagingStudy/DICOM; external reference resolution;
+  interpretation; presentedForm/PDF; DICOM retrieval/viewing; external reference resolution;
   authentication, authorization, verified provenance and protected storage. Existing SDK 57
   security findings remain unresolved and release gates remain in force.
+
+### 4C. Imaging studies and radiology reports
+
+- **Goal:** One fictional native ImagingStudy and one RAD DiagnosticReport with explicit
+  local report/study links, metadata presentation and original source inspection.
+- **Dependencies:** Phase 4B merge `543d718`; existing source-qualified acquisition, catalog,
+  renderer and record-detail navigation. No new workspace or dependency is introduced.
+- **Status:** Implemented in source on `feat/imaging-studies`, **awaiting maintainer
+  validation and GitHub review; not complete**. Basic ImagingStudy status/metadata/subject
+  guards preserve immutable originals. Studies use explicit resource-type classification
+  evidence; radiology reports require exact unversioned `v2-0074|RAD`. LAB and Observation
+  rules remain intact. Modifier-bearing studies/reports remain visible as unclassified.
+- **Relationships:** The existing resolver supports both report `result -> Observation` and
+  `imagingStudy -> ImagingStudy`, with separate kinds/paths, exact source/patient matching,
+  complete retained-version ambiguity checks and explicit unresolved reasons. No latest
+  version, recursive traversal, external fetch or authorization is inferred. Study-to-report
+  navigation uses already resolved inbound catalog evidence, not another resolver.
+- **Presentation:** Study description/status/start/identifiers, reported counts, listed
+  metadata counts, raw supported modality coding and supplied Series/SOP Instance UIDs.
+  Registered/available metadata does not prove a completed examination or available pixels.
+  RAD reports retain final-status and unsupported-content fallbacks. No thumbnails, image
+  data, findings interpretation or numerical imaging history is implemented.
+- **Validation / remaining work:** Run focused acquisition/catalog/renderer tests, previous
+  laboratory and weight tests, full suite, TypeScript, lint and formatting checks. Verify
+  web/iPhone Records counts, both navigation directions, unresolved links, original JSON,
+  separate timestamps, accessibility and unchanged Trends. No installs, tests, builds,
+  Expo or formatters were run. Manifests, lockfile and SDK 57 security findings are unchanged.
+  See [Phase 4C boundary](architecture.md#imaging-studies-and-radiology-reports-phase-4c).
+- **Deferred / release gates:** Authorized DICOMweb QIDO-RS/WADO-RS, external authenticated
+  retrieval, large payload/caching policies, patient authorization, secure storage/privacy,
+  PDF/document viewing and imaging timelines. No production or real-data approval is implied.
 
 ### 5. Local FHIR R4 file and Bundle import
 
